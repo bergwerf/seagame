@@ -2,34 +2,52 @@
 // ============
 
 import * as m from './math'
-import * as game from './game'
+import { Seagame } from './game'
 
 // Auto-playing video with sound is allowed after user interaction:
 // https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide
 
-export const size = m.vec2(1920, 1080)
+const size = m.vec2(1920, 1080)
+const game = new Seagame()
 
-// Initialize canvas.
+// Setup canvas
+// ------------
+
 const canvas = document.getElementById("canvas") as HTMLCanvasElement
 canvas.width = size.x
 canvas.height = size.y
 const ctx = canvas.getContext("2d")!
 
+// Setup event handling
+// --------------------
+
+function coordinate(e: PointerEvent) {
+  const b = m.dom_bounding_box(canvas)
+  const v = m.client_position(e)
+  return v.minus(b.position).times(b.size.inv())
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  game.pointer_down(coordinate(e))
+})
+
 canvas.addEventListener('pointermove', (e) => {
-  const bbox = m.dom_bounding_box(canvas)
-  const v_client = m.client_position(e)
-  const v = v_client.minus(bbox.position).times(bbox.size.inv()).times(size)
+  game.pointer_move(coordinate(e))
 })
 
-game.layer_bunny.load().then(() => {
-  game.layer_bunny.video.play()
+canvas.addEventListener('pointerup', (e) => {
+  game.pointer_up(coordinate(e))
 })
 
-// Render continuously.
+// Setup continuous render cycle
+// -----------------------------
+
 function draw() {
-  for (let layer of game.view) {
-    layer.draw(ctx, size)
-  }
+  game.draw(ctx, size)
   requestAnimationFrame(draw)
 }
+
 draw()
+
+// Start loading the game.
+game.load().then(() => game.update('loaded'))

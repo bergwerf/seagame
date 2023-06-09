@@ -203,45 +203,110 @@ define("layer", ["require", "exports"], function (require, exports) {
 define("game", ["require", "exports", "layer"], function (require, exports, layer) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.view = exports.layer_navigation = exports.layer_intro = exports.layer_start = exports.layer_loading = exports.layer_bunny = void 0;
-    exports.layer_bunny = new layer.VideoLayer('assets/bunny.mp4');
-    exports.layer_loading = new layer.ImageLayer('assets/loading.jpg');
-    exports.layer_start = new layer.ImageLayer('assets/start.jpg');
-    exports.layer_intro = new layer.VideoLayer('assets/intro.mp4');
-    exports.layer_navigation = new layer.ImageLayer('assets/navigation.jpg');
-    exports.view = [
-        exports.layer_bunny
-    ];
+    exports.Seagame = void 0;
+    var View;
+    (function (View) {
+        View[View["Loading"] = 0] = "Loading";
+        View[View["Intro"] = 1] = "Intro";
+        View[View["Character"] = 2] = "Character";
+        View[View["Walk"] = 3] = "Walk";
+    })(View || (View = {}));
+    var Seagame = /** @class */ (function () {
+        function Seagame() {
+            this.layer_bunny = new layer.VideoLayer('assets/bunny.mp4');
+            this.layer_loading = new layer.ImageLayer('assets/loading.jpg');
+            this.layer_start = new layer.ImageLayer('assets/start.jpg');
+            this.layer_intro = new layer.VideoLayer('assets/intro.mp4');
+            this.layer_navigation = new layer.ImageLayer('assets/navigation.jpg');
+            this.view = View.Loading;
+            this.layers = [
+                this.layer_bunny
+            ];
+        }
+        Seagame.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, Promise.all([
+                                this.layer_bunny.load()
+                            ])];
+                        case 1:
+                            _a.sent();
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        };
+        Seagame.prototype.reset = function () { };
+        Seagame.prototype.update = function (event) {
+            switch (this.view) {
+                case View.Loading:
+                    switch (event) {
+                        case 'loaded':
+                            this.layer_bunny.video.play();
+                            break;
+                    }
+                    break;
+            }
+        };
+        Seagame.prototype.draw = function (ctx, size) {
+            for (var _i = 0, _a = this.layers; _i < _a.length; _i++) {
+                var layer_1 = _a[_i];
+                layer_1.draw(ctx, size);
+            }
+            return null;
+        };
+        Seagame.prototype.pointer_down = function (v) {
+            return null;
+        };
+        Seagame.prototype.pointer_move = function (v) {
+            return null;
+        };
+        Seagame.prototype.pointer_up = function (v) {
+            return null;
+        };
+        return Seagame;
+    }());
+    exports.Seagame = Seagame;
 });
 // Main Program
 // ============
-define("main", ["require", "exports", "math", "game"], function (require, exports, m, game) {
+define("main", ["require", "exports", "math", "game"], function (require, exports, m, game_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.size = void 0;
     // Auto-playing video with sound is allowed after user interaction:
     // https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide
-    exports.size = m.vec2(1920, 1080);
-    // Initialize canvas.
+    var size = m.vec2(1920, 1080);
+    var game = new game_1.Seagame();
+    // Setup canvas
+    // ------------
     var canvas = document.getElementById("canvas");
-    canvas.width = exports.size.x;
-    canvas.height = exports.size.y;
+    canvas.width = size.x;
+    canvas.height = size.y;
     var ctx = canvas.getContext("2d");
+    // Setup event handling
+    // --------------------
+    function coordinate(e) {
+        var b = m.dom_bounding_box(canvas);
+        var v = m.client_position(e);
+        return v.minus(b.position).times(b.size.inv());
+    }
+    canvas.addEventListener('pointerdown', function (e) {
+        game.pointer_down(coordinate(e));
+    });
     canvas.addEventListener('pointermove', function (e) {
-        var bbox = m.dom_bounding_box(canvas);
-        var v_client = m.client_position(e);
-        var v = v_client.minus(bbox.position).times(bbox.size.inv()).times(exports.size);
+        game.pointer_move(coordinate(e));
     });
-    game.layer_bunny.load().then(function () {
-        game.layer_bunny.video.play();
+    canvas.addEventListener('pointerup', function (e) {
+        game.pointer_up(coordinate(e));
     });
-    // Render continuously.
+    // Setup continuous render cycle
+    // -----------------------------
     function draw() {
-        for (var _i = 0, _a = game.view; _i < _a.length; _i++) {
-            var layer = _a[_i];
-            layer.draw(ctx, exports.size);
-        }
+        game.draw(ctx, size);
         requestAnimationFrame(draw);
     }
     draw();
+    // Start loading the game.
+    game.load().then(function () { return game.update('loaded'); });
 });
