@@ -38,7 +38,8 @@ export class Story<View_Id extends string | number> {
   private run(f: (l: Layer) => string | null) {
     let event: string | null = null
     for (let layer of this.views[this.current_view]) {
-      event = event || f(layer)
+      const f_event = f(layer)
+      event = event || f_event
     }
     if (event !== null) {
       this.handle(event)

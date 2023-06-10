@@ -137,13 +137,21 @@ define("math", ["require", "exports"], function (require, exports) {
 define("util", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.lookupPixel = exports.loadImageData = void 0;
-    function loadImageData(src) {
+    exports.lookup_pixel = exports.load_image_data = exports.create_canvas = void 0;
+    // OffscreenCanvas is not yet supported by default on Firefox ESR.
+    function create_canvas(width, height) {
+        var canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+    exports.create_canvas = create_canvas;
+    function load_image_data(src) {
         var _this = this;
         return new Promise(function (resolve, _) {
             var image = new Image();
             image.addEventListener('load', function () {
-                var canvas = new OffscreenCanvas(image.width, image.height);
+                var canvas = create_canvas(image.width, image.height);
                 var ctx = canvas.getContext('2d');
                 ctx.drawImage(image, 0, 0);
                 var data = ctx.getImageData(0, 0, image.width, image.height);
@@ -152,13 +160,13 @@ define("util", ["require", "exports"], function (require, exports) {
             image.src = _this.src;
         });
     }
-    exports.loadImageData = loadImageData;
-    function lookupPixel(image, pixel) {
+    exports.load_image_data = load_image_data;
+    function lookup_pixel(image, pixel) {
         var i = 4 * (pixel.y * image.width + pixel.x);
         var d = image.data;
         return [d[i], d[i + 1], d[i + 2], d[i + 3]];
     }
-    exports.lookupPixel = lookupPixel;
+    exports.lookup_pixel = lookup_pixel;
 });
 // Interactive Story Based on Layers
 // =================================
@@ -182,7 +190,8 @@ define("story", ["require", "exports"], function (require, exports) {
             var event = null;
             for (var _i = 0, _a = this.views[this.current_view]; _i < _a.length; _i++) {
                 var layer = _a[_i];
-                event = event || f(layer);
+                var f_event = f(layer);
+                event = event || f_event;
             }
             if (event !== null) {
                 this.handle(event);
@@ -209,13 +218,13 @@ define("story", ["require", "exports"], function (require, exports) {
 define("layer/basic", ["require", "exports", "util"], function (require, exports, util) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Switched_Layer = exports.Click_Layer = exports.Video_Layer = exports.Image_Layer = void 0;
-    var Image_Layer = /** @class */ (function () {
-        function Image_Layer(src) {
+    exports.Switch = exports.Click_Mask = exports.Click_Anywhere = exports.Video = exports.Image = void 0;
+    var Image = /** @class */ (function () {
+        function Image(src) {
             this.src = src;
-            this.image = new Image();
+            this.image = document.createElement('img');
         }
-        Image_Layer.prototype.load = function () {
+        Image.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
                 var _this = this;
                 return __generator(this, function (_a) {
@@ -226,68 +235,100 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
                 });
             });
         };
-        Image_Layer.prototype.draw = function (ctx) {
+        Image.prototype.draw = function (ctx) {
             ctx.drawImage(this.image, 0, 0);
             return null;
         };
-        Image_Layer.prototype.pointer_down = function () { return null; };
-        Image_Layer.prototype.pointer_move = function () { return null; };
-        Image_Layer.prototype.pointer_up = function () { return null; };
-        return Image_Layer;
+        Image.prototype.pointer_down = function () { return null; };
+        Image.prototype.pointer_move = function () { return null; };
+        Image.prototype.pointer_up = function () { return null; };
+        return Image;
     }());
-    exports.Image_Layer = Image_Layer;
-    var Video_Layer = /** @class */ (function () {
-        function Video_Layer(src, finish_event, muted, loop) {
-            if (finish_event === void 0) { finish_event = 'finish'; }
-            if (muted === void 0) { muted = true; }
-            if (loop === void 0) { loop = false; }
+    exports.Image = Image;
+    var Video = /** @class */ (function () {
+        function Video(src, _a) {
+            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.muted, muted = _d === void 0 ? true : _d, _e = _b.loop, loop = _e === void 0 ? false : _e, _f = _b.autoplay, autoplay = _f === void 0 ? false : _f;
             this.src = src;
-            this.finish_event = finish_event;
+            this.finish_event = on_finish;
             this.video = document.createElement("video");
             this.video.muted = muted;
             this.video.loop = loop;
+            this.video.autoplay = autoplay;
         }
-        Video_Layer.prototype.load = function () {
+        Video.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
                 var _this = this;
                 return __generator(this, function (_a) {
-                    return [2 /*return*/, new Promise(function (res, _) {
-                            _this.video.addEventListener('canplaythrough', function () { return res(); }, { once: true });
+                    return [2 /*return*/, new Promise(function (resolve, _) {
+                            _this.video.addEventListener('canplaythrough', function () {
+                                if (_this.video.loop) {
+                                    _this.cache = util.create_canvas(_this.video.videoWidth, _this.video.videoHeight);
+                                    _this.cache_ctx = _this.cache.getContext('2d');
+                                }
+                                resolve();
+                            }, { once: true });
                             _this.video.src = _this.src;
                         })];
                 });
             });
         };
-        Video_Layer.prototype.draw = function (ctx) {
-            ctx.drawImage(this.video, 0, 0);
-            var finish = this.video.currentTime == this.video.duration;
-            return finish ? this.finish_event : null;
+        Video.prototype.draw = function (ctx) {
+            // This fixes blank frames between loop rewinds.
+            if (this.video.loop && this.cache_ctx) {
+                this.cache_ctx.drawImage(this.video, 0, 0);
+                ctx.drawImage(this.cache, 0, 0);
+                return null;
+            }
+            else {
+                ctx.drawImage(this.video, 0, 0);
+                var finish = this.video.currentTime == this.video.duration;
+                return finish ? this.finish_event : null;
+            }
         };
-        Video_Layer.prototype.play = function () {
+        Video.prototype.play = function () {
             this.video.pause();
             this.video.currentTime = 0;
             this.video.play();
         };
-        Video_Layer.prototype.pointer_down = function () { return null; };
-        Video_Layer.prototype.pointer_move = function () { return null; };
-        Video_Layer.prototype.pointer_up = function () { return null; };
-        return Video_Layer;
+        Video.prototype.pointer_down = function () { return null; };
+        Video.prototype.pointer_move = function () { return null; };
+        Video.prototype.pointer_up = function () { return null; };
+        return Video;
     }());
-    exports.Video_Layer = Video_Layer;
-    var Click_Layer = /** @class */ (function () {
-        function Click_Layer(src, click_event) {
-            if (click_event === void 0) { click_event = 'click'; }
-            this.src = src;
-            this.click_event = click_event;
+    exports.Video = Video;
+    var Click_Anywhere = /** @class */ (function () {
+        function Click_Anywhere(_a) {
+            var _b = _a === void 0 ? {} : _a, _c = _b.on_click, on_click = _c === void 0 ? 'click' : _c;
+            this.click_event = on_click;
         }
-        Click_Layer.prototype.load = function () {
+        Click_Anywhere.prototype.pointer_up = function (v) {
+            return this.click_event;
+        };
+        Click_Anywhere.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+                return [2 /*return*/];
+            }); });
+        };
+        Click_Anywhere.prototype.draw = function () { return null; };
+        Click_Anywhere.prototype.pointer_down = function () { return null; };
+        Click_Anywhere.prototype.pointer_move = function () { return null; };
+        return Click_Anywhere;
+    }());
+    exports.Click_Anywhere = Click_Anywhere;
+    var Click_Mask = /** @class */ (function () {
+        function Click_Mask(src, _a) {
+            var _b = _a === void 0 ? {} : _a, _c = _b.on_click, on_click = _c === void 0 ? 'click' : _c;
+            this.src = src;
+            this.click_event = on_click;
+        }
+        Click_Mask.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
                 var _a;
                 return __generator(this, function (_b) {
                     switch (_b.label) {
                         case 0:
                             _a = this;
-                            return [4 /*yield*/, util.loadImageData(this.src)];
+                            return [4 /*yield*/, util.load_image_data(this.src)];
                         case 1:
                             _a.mask = _b.sent();
                             return [2 /*return*/];
@@ -295,78 +336,92 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
                 });
             });
         };
-        Click_Layer.prototype.pointer_up = function (v) {
-            var c = util.lookupPixel(this.mask, v.floor());
+        Click_Mask.prototype.pointer_up = function (v) {
+            var c = util.lookup_pixel(this.mask, v.floor());
             return c[0] > 0 ? this.click_event : null;
         };
-        Click_Layer.prototype.draw = function () { return null; };
-        Click_Layer.prototype.pointer_down = function () { return null; };
-        Click_Layer.prototype.pointer_move = function () { return null; };
-        return Click_Layer;
+        Click_Mask.prototype.draw = function () { return null; };
+        Click_Mask.prototype.pointer_down = function () { return null; };
+        Click_Mask.prototype.pointer_move = function () { return null; };
+        return Click_Mask;
     }());
-    exports.Click_Layer = Click_Layer;
-    var Switched_Layer = /** @class */ (function () {
-        function Switched_Layer(layer) {
+    exports.Click_Mask = Click_Mask;
+    var Switch = /** @class */ (function () {
+        function Switch(layer) {
             this.layer = layer;
-            this.show = false;
+            this.active = false;
         }
-        Switched_Layer.prototype.load = function () {
+        Switch.prototype.load = function () {
             return this.layer.load();
         };
-        Switched_Layer.prototype.draw = function (ctx, size) {
-            return this.show ? this.layer.draw(ctx, size) : null;
+        Switch.prototype.draw = function (ctx, size) {
+            return this.active ? this.layer.draw(ctx, size) : null;
         };
-        Switched_Layer.prototype.pointer_down = function (v) {
-            return this.show ? this.layer.pointer_down(v) : null;
+        Switch.prototype.pointer_down = function (v) {
+            return this.active ? this.layer.pointer_down(v) : null;
         };
-        Switched_Layer.prototype.pointer_move = function (v) {
-            return this.show ? this.layer.pointer_move(v) : null;
+        Switch.prototype.pointer_move = function (v) {
+            return this.active ? this.layer.pointer_move(v) : null;
         };
-        Switched_Layer.prototype.pointer_up = function (v) {
-            return this.show ? this.layer.pointer_up(v) : null;
+        Switch.prototype.pointer_up = function (v) {
+            return this.active ? this.layer.pointer_up(v) : null;
         };
-        return Switched_Layer;
+        return Switch;
     }());
-    exports.Switched_Layer = Switched_Layer;
+    exports.Switch = Switch;
 });
 // Game Logic
 // ==========
-define("game", ["require", "exports", "layer/basic", "story"], function (require, exports, basic_1, story_1) {
+define("game", ["require", "exports", "layer/basic", "story"], function (require, exports, layer, story_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.start = exports.story = void 0;
-    var layer = {
-        bunny: new basic_1.Video_Layer('assets/bunny.mp4'),
-        startscherm: new basic_1.Image_Layer('assets/Startscherm.jpg')
+    var layers = {
+        hourglass: new layer.Video('assets/start/hourglass.mp4', { loop: true, autoplay: true }),
+        startscreen: new layer.Image('assets/start/startscreen.jpg'),
+        crab: new layer.Video('assets/start/crab.mp4')
     };
     var views = {
         loading: [
-            layer.bunny
+            layers.hourglass
         ],
-        intro: [
-            layer.startscherm
+        start: [
+            layers.startscreen,
+            new layer.Click_Anywhere({ on_click: 'continue' })
+        ],
+        intro1: [
+            layers.crab
         ]
     };
     var events = {
         loading: {
-            loaded: function () { return layer.bunny.play(); },
-            finish: function () { return 'intro'; }
+            loaded: function () { return 'start'; }
         },
-        intro: {}
+        start: {
+            continue: function () {
+                layers.crab.play();
+                return 'intro1';
+            }
+        },
+        intro1: {}
     };
     exports.story = new story_1.Story(views, events, 'loading');
     function start() {
         return __awaiter(this, void 0, void 0, function () {
-            var promises, s;
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0:
-                        promises = [];
-                        for (s in layer) {
-                            promises.push(layer[s].load());
-                        }
-                        return [4 /*yield*/, Promise.all(promises)];
+                    case 0: 
+                    // First load the load animation.
+                    return [4 /*yield*/, layers.hourglass.load()
+                        // Then load all other assets.
+                    ];
                     case 1:
+                        // First load the load animation.
+                        _a.sent();
+                        // Then load all other assets.
+                        return [4 /*yield*/, Promise.all(Object.values(layers).map(function (l) { return l.load(); }))];
+                    case 2:
+                        // Then load all other assets.
                         _a.sent();
                         exports.story.handle('loaded');
                         return [2 /*return*/];
