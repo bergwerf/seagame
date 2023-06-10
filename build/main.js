@@ -334,6 +334,7 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
         Video.prototype.start = function () {
             this.video.pause();
             this.video.currentTime = 0;
+            this.video.load();
             this.video.play();
         };
         Video.prototype.stop = function () {

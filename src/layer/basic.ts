@@ -123,6 +123,7 @@ export class Video implements Layer {
   start() {
     this.video.pause()
     this.video.currentTime = 0
+    this.video.load()
     this.video.play()
   }
 
