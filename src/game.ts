@@ -1,52 +1,162 @@
 // Game Logic
 // ==========
 
-import * as m from './math'
+import * as m from './util/math'
 import * as layer from './layer/basic'
-import { Story, Layer, View_Map, Event_Map } from './story'
+import { Story, Layer, Event_Map } from './story'
 
 const layers = {
-  hourglass: new layer.Video('assets/start/hourglass.mp4',
-    { loop: true, autoplay: true }),
-  startscreen: new layer.Image('assets/start/startscreen.jpg'),
-  crab: new layer.Video('assets/start/crab.mp4')
+  // Navigation
+  nav_rewind: new layer.Composite([
+    new layer.Image('assets/nav/rewind.png'),
+    new layer.Click_Mask('assets/nav/rewind_mask.png', 'rewind')
+  ]),
+  nav_next: new layer.Composite([
+    new layer.Image('assets/nav/next.png'),
+    new layer.Click_Mask('assets/nav/next_mask.png', 'next')
+  ]),
+
+  // Introduction
+  intro_hourglass: new layer.Video('assets/intro/hourglass.mp4', { loop: true, autoplay: true }),
+  intro_dunes: new layer.Image('assets/intro/dunes.jpg'),
+  intro_crab: new layer.Video('assets/intro/crab.mp4'),
+  intro_sea: new layer.Video('assets/intro/sea.mp4'),
+  intro_hand: new layer.Video('assets/intro/hand.mp4'),
+  intro_shell: new layer.Composite([
+    new layer.Image('assets/intro/shell.jpg'),
+    new layer.Click_Mask('assets/intro/shell_mask.png', 'pickup')
+  ]),
+  intro_shell_pickup: new layer.Video('assets/intro/shell_pickup.mp4'),
+  intro_welcome: new layer.Video('assets/intro/welcome.mp4', { loop: true }),
+  intro_load: new layer.Video('assets/intro/jellyload.mp4'),
+
+  // Character selection
+  character_background: new layer.Video('assets/character/background.mp4', { loop: true }),
+  character_characters: new layer.GIF('assets/character/characters.gif')
 }
 
-type Views = 'loading' | 'start' | 'intro1'
-
-const views: View_Map<Views> = {
-  loading: [
-    layers.hourglass
-  ],
-  start: [
-    layers.startscreen,
-    new layer.Click_Anywhere({ on_click: 'continue' })
-  ],
-  intro1: [
-    layers.crab
-  ]
+const views = {
+  loading: layers.intro_hourglass,
+  intro_dunes: new layer.Composite([
+    layers.intro_dunes,
+    new layer.Click_Anywhere('continue')
+  ]),
+  intro_crab: layers.intro_crab,
+  intro_crab_nav: new layer.Composite([
+    layers.intro_crab,
+    layers.nav_rewind,
+    layers.nav_next
+  ]),
+  intro_sea: layers.intro_sea,
+  intro_sea_nav: new layer.Composite([
+    layers.intro_sea,
+    layers.nav_rewind,
+    layers.nav_next
+  ]),
+  intro_hand: layers.intro_hand,
+  intro_hand_nav: new layer.Composite([
+    layers.intro_hand,
+    layers.nav_rewind,
+    layers.nav_next
+  ]),
+  intro_shell: layers.intro_shell,
+  intro_shell_pickup: layers.intro_shell_pickup,
+  intro_welcome: new layer.Composite([
+    layers.intro_welcome,
+    layers.nav_next
+  ]),
+  intro_load: layers.intro_load,
+  intro_character: new layer.Composite([
+    layers.character_background,
+    layers.character_characters
+  ])
 }
 
 const events: Event_Map<keyof typeof views> = {
   loading: {
-    loaded: () => 'start'
-  },
-  start: {
-    continue: () => {
-      layers.crab.play()
-      return 'intro1'
+    loaded: () => {
+      layers.intro_hourglass.stop()
+      return 'intro_dunes'
     }
   },
-  intro1: {
-
-  }
+  intro_dunes: {
+    continue: () => {
+      layers.intro_crab.start()
+      return 'intro_crab'
+    }
+  },
+  intro_crab: {
+    finish: () => 'intro_crab_nav'
+  },
+  intro_crab_nav: {
+    rewind: () => {
+      layers.intro_crab.start()
+      return 'intro_crab'
+    },
+    next: () => {
+      layers.intro_sea.start()
+      return 'intro_sea'
+    }
+  },
+  intro_sea: {
+    finish: () => 'intro_sea_nav'
+  },
+  intro_sea_nav: {
+    rewind: () => {
+      layers.intro_sea.start()
+      return 'intro_sea'
+    },
+    next: () => {
+      layers.intro_hand.start()
+      return 'intro_hand'
+    }
+  },
+  intro_hand: {
+    finish: () => 'intro_hand_nav'
+  },
+  intro_hand_nav: {
+    rewind: () => {
+      layers.intro_hand.start()
+      return 'intro_hand'
+    },
+    next: () => 'intro_shell'
+  },
+  intro_shell: {
+    pickup: () => {
+      layers.intro_shell_pickup.start()
+      return 'intro_shell_pickup'
+    }
+  },
+  intro_shell_pickup: {
+    finish: () => {
+      layers.intro_welcome.start()
+      return 'intro_welcome'
+    }
+  },
+  intro_welcome: {
+    next: () => {
+      layers.intro_welcome.stop()
+      layers.intro_load.start()
+      return 'intro_load'
+    }
+  },
+  intro_load: {
+    finish: () => {
+      layers.intro_hourglass.stop()
+      layers.character_background.start()
+      layers.character_characters.start()
+      return 'intro_character'
+    }
+  },
+  intro_character: {}
 }
 
-export const story = new Story(views, events, 'loading')
+export const story = new Story<keyof typeof views>(
+  views, events, 'loading')
 
 export async function start() {
   // First load the load animation.
-  await layers.hourglass.load()
+  await layers.intro_hourglass.load()
 
   // Then load all other assets.
   await Promise.all(Object.values(layers).map((l: Layer) => l.load()))

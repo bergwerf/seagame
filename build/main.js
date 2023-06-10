@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 // Math and Linear Algebra Tools
 // =============================
-define("math", ["require", "exports"], function (require, exports) {
+define("util/math", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.dom_bounding_box = exports.client_position = exports.vec2 = exports.v11 = exports.v01 = exports.v10 = exports.v00 = exports.Box = exports.Vector_2D = void 0;
@@ -134,30 +134,31 @@ define("math", ["require", "exports"], function (require, exports) {
 });
 // Utilities
 // =========
-define("util", ["require", "exports"], function (require, exports) {
+define("util/canvas", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.lookup_pixel = exports.load_image_data = exports.create_canvas = void 0;
+    exports.lookup_pixel = exports.load_image_data = exports.create = void 0;
     // OffscreenCanvas is not yet supported by default on Firefox ESR.
-    function create_canvas(width, height) {
+    function create(width, height) {
+        if (width === void 0) { width = 0; }
+        if (height === void 0) { height = 0; }
         var canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         return canvas;
     }
-    exports.create_canvas = create_canvas;
+    exports.create = create;
     function load_image_data(src) {
-        var _this = this;
         return new Promise(function (resolve, _) {
             var image = new Image();
             image.addEventListener('load', function () {
-                var canvas = create_canvas(image.width, image.height);
+                var canvas = create(image.width, image.height);
                 var ctx = canvas.getContext('2d');
                 ctx.drawImage(image, 0, 0);
                 var data = ctx.getImageData(0, 0, image.width, image.height);
                 resolve(data);
             }, { once: true });
-            image.src = _this.src;
+            image.src = src;
         });
     }
     exports.load_image_data = load_image_data;
@@ -181,24 +182,19 @@ define("story", ["require", "exports"], function (require, exports) {
             this.current_view = current_view;
         }
         Story.prototype.handle = function (event) {
-            var cb = this.events[this.current_view][event];
-            if (cb != undefined) {
-                this.current_view = cb() || this.current_view;
+            var callback = this.events[this.current_view][event];
+            if (callback != undefined) {
+                this.current_view = callback() || this.current_view;
             }
         };
         Story.prototype.run = function (f) {
-            var event = null;
-            for (var _i = 0, _a = this.views[this.current_view]; _i < _a.length; _i++) {
-                var layer = _a[_i];
-                var f_event = f(layer);
-                event = event || f_event;
-            }
-            if (event !== null) {
+            var event = f(this.views[this.current_view]);
+            if (event != null) {
                 this.handle(event);
             }
         };
-        Story.prototype.draw = function (ctx, size) {
-            this.run(function (layer) { return layer.draw(ctx, size); });
+        Story.prototype.draw = function (ctx) {
+            this.run(function (layer) { return layer.draw(ctx); });
         };
         Story.prototype.pointer_down = function (v) {
             this.run(function (layer) { return layer.pointer_down(v); });
@@ -215,10 +211,73 @@ define("story", ["require", "exports"], function (require, exports) {
 });
 // Basic Layers
 // ============
-define("layer/basic", ["require", "exports", "util"], function (require, exports, util) {
+define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], function (require, exports, canvas) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Switch = exports.Click_Mask = exports.Click_Anywhere = exports.Video = exports.Image = void 0;
+    exports.Click_Mask = exports.Click_Anywhere = exports.GIF = exports.Video = exports.Image = exports.Composite = exports.Switch = void 0;
+    var Switch = /** @class */ (function () {
+        function Switch(layer) {
+            this.layer = layer;
+            this.active = false;
+        }
+        Switch.prototype.load = function () {
+            return this.layer.load();
+        };
+        Switch.prototype.draw = function (ctx) {
+            return this.active ? this.layer.draw(ctx) : null;
+        };
+        Switch.prototype.pointer_down = function (v) {
+            return this.active ? this.layer.pointer_down(v) : null;
+        };
+        Switch.prototype.pointer_move = function (v) {
+            return this.active ? this.layer.pointer_move(v) : null;
+        };
+        Switch.prototype.pointer_up = function (v) {
+            return this.active ? this.layer.pointer_up(v) : null;
+        };
+        return Switch;
+    }());
+    exports.Switch = Switch;
+    var Composite = /** @class */ (function () {
+        function Composite(layers) {
+            this.layers = layers;
+        }
+        Composite.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, Promise.all(this.layers.map(function (l) { return l.load(); }))];
+                        case 1:
+                            _a.sent();
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        };
+        Composite.prototype.run = function (f) {
+            var event = null;
+            for (var _i = 0, _a = this.layers; _i < _a.length; _i++) {
+                var layer = _a[_i];
+                var f_event = f(layer);
+                event = event || f_event;
+            }
+            return event;
+        };
+        Composite.prototype.draw = function (ctx) {
+            return this.run(function (layer) { return layer.draw(ctx); });
+        };
+        Composite.prototype.pointer_down = function (v) {
+            return this.run(function (layer) { return layer.pointer_down(v); });
+        };
+        Composite.prototype.pointer_move = function (v) {
+            return this.run(function (layer) { return layer.pointer_move(v); });
+        };
+        Composite.prototype.pointer_up = function (v) {
+            return this.run(function (layer) { return layer.pointer_up(v); });
+        };
+        return Composite;
+    }());
+    exports.Composite = Composite;
     var Image = /** @class */ (function () {
         function Image(src) {
             this.src = src;
@@ -261,10 +320,10 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
                 return __generator(this, function (_a) {
                     return [2 /*return*/, new Promise(function (resolve, _) {
                             _this.video.addEventListener('canplaythrough', function () {
-                                if (_this.video.loop) {
-                                    _this.cache = util.create_canvas(_this.video.videoWidth, _this.video.videoHeight);
-                                    _this.cache_ctx = _this.cache.getContext('2d');
-                                }
+                                var w = _this.video.videoWidth;
+                                var h = _this.video.videoHeight;
+                                _this.cache = canvas.create(w, h);
+                                _this.cache_ctx = _this.cache.getContext('2d');
                                 resolve();
                             }, { once: true });
                             _this.video.src = _this.src;
@@ -272,23 +331,31 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
                 });
             });
         };
-        Video.prototype.draw = function (ctx) {
-            // This fixes blank frames between loop rewinds.
-            if (this.video.loop && this.cache_ctx) {
-                this.cache_ctx.drawImage(this.video, 0, 0);
-                ctx.drawImage(this.cache, 0, 0);
-                return null;
-            }
-            else {
-                ctx.drawImage(this.video, 0, 0);
-                var finish = this.video.currentTime == this.video.duration;
-                return finish ? this.finish_event : null;
-            }
-        };
-        Video.prototype.play = function () {
+        Video.prototype.start = function () {
             this.video.pause();
             this.video.currentTime = 0;
             this.video.play();
+        };
+        Video.prototype.stop = function () {
+            this.video.pause();
+        };
+        Video.prototype.draw = function (ctx) {
+            // The frame cache mitigates blank frames between rewinds.
+            if (this.cache) {
+                this.cache_ctx.drawImage(this.video, 0, 0);
+                ctx.drawImage(this.cache, 0, 0);
+            }
+            else {
+                ctx.drawImage(this.video, 0, 0);
+            }
+            // Return event when a non-looped video ends.
+            if (this.video.loop) {
+                return null;
+            }
+            else {
+                var finish = this.video.currentTime == this.video.duration;
+                return finish ? this.finish_event : null;
+            }
         };
         Video.prototype.pointer_down = function () { return null; };
         Video.prototype.pointer_move = function () { return null; };
@@ -296,10 +363,47 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
         return Video;
     }());
     exports.Video = Video;
+    var GIF = /** @class */ (function () {
+        function GIF(src) {
+            this.src = src;
+        }
+        GIF.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                var _a;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            _a = this;
+                            return [4 /*yield*/, gifler(this.src).get()];
+                        case 1:
+                            _a.anim = _b.sent();
+                            this.canvas = canvas.create();
+                            this.anim.animateInCanvas(this.canvas);
+                            this.anim.stop();
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        };
+        GIF.prototype.start = function () {
+            this.anim.start();
+        };
+        GIF.prototype.stop = function () {
+            this.anim.stop();
+        };
+        GIF.prototype.draw = function (ctx) {
+            ctx.drawImage(this.canvas, 0, 0);
+            return null;
+        };
+        GIF.prototype.pointer_down = function () { return null; };
+        GIF.prototype.pointer_move = function () { return null; };
+        GIF.prototype.pointer_up = function () { return null; };
+        return GIF;
+    }());
+    exports.GIF = GIF;
     var Click_Anywhere = /** @class */ (function () {
-        function Click_Anywhere(_a) {
-            var _b = _a === void 0 ? {} : _a, _c = _b.on_click, on_click = _c === void 0 ? 'click' : _c;
-            this.click_event = on_click;
+        function Click_Anywhere(click_event) {
+            this.click_event = click_event;
         }
         Click_Anywhere.prototype.pointer_up = function (v) {
             return this.click_event;
@@ -316,10 +420,9 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
     }());
     exports.Click_Anywhere = Click_Anywhere;
     var Click_Mask = /** @class */ (function () {
-        function Click_Mask(src, _a) {
-            var _b = _a === void 0 ? {} : _a, _c = _b.on_click, on_click = _c === void 0 ? 'click' : _c;
+        function Click_Mask(src, click_event) {
             this.src = src;
-            this.click_event = on_click;
+            this.click_event = click_event;
         }
         Click_Mask.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
@@ -328,7 +431,7 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
                     switch (_b.label) {
                         case 0:
                             _a = this;
-                            return [4 /*yield*/, util.load_image_data(this.src)];
+                            return [4 /*yield*/, canvas.load_image_data(this.src)];
                         case 1:
                             _a.mask = _b.sent();
                             return [2 /*return*/];
@@ -337,7 +440,7 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
             });
         };
         Click_Mask.prototype.pointer_up = function (v) {
-            var c = util.lookup_pixel(this.mask, v.floor());
+            var c = canvas.lookup_pixel(this.mask, v.floor());
             return c[0] > 0 ? this.click_event : null;
         };
         Click_Mask.prototype.draw = function () { return null; };
@@ -346,29 +449,6 @@ define("layer/basic", ["require", "exports", "util"], function (require, exports
         return Click_Mask;
     }());
     exports.Click_Mask = Click_Mask;
-    var Switch = /** @class */ (function () {
-        function Switch(layer) {
-            this.layer = layer;
-            this.active = false;
-        }
-        Switch.prototype.load = function () {
-            return this.layer.load();
-        };
-        Switch.prototype.draw = function (ctx, size) {
-            return this.active ? this.layer.draw(ctx, size) : null;
-        };
-        Switch.prototype.pointer_down = function (v) {
-            return this.active ? this.layer.pointer_down(v) : null;
-        };
-        Switch.prototype.pointer_move = function (v) {
-            return this.active ? this.layer.pointer_move(v) : null;
-        };
-        Switch.prototype.pointer_up = function (v) {
-            return this.active ? this.layer.pointer_up(v) : null;
-        };
-        return Switch;
-    }());
-    exports.Switch = Switch;
 });
 // Game Logic
 // ==========
@@ -377,33 +457,145 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.start = exports.story = void 0;
     var layers = {
-        hourglass: new layer.Video('assets/start/hourglass.mp4', { loop: true, autoplay: true }),
-        startscreen: new layer.Image('assets/start/startscreen.jpg'),
-        crab: new layer.Video('assets/start/crab.mp4')
+        // Navigation
+        nav_rewind: new layer.Composite([
+            new layer.Image('assets/nav/rewind.png'),
+            new layer.Click_Mask('assets/nav/rewind_mask.png', 'rewind')
+        ]),
+        nav_next: new layer.Composite([
+            new layer.Image('assets/nav/next.png'),
+            new layer.Click_Mask('assets/nav/next_mask.png', 'next')
+        ]),
+        // Introduction
+        intro_hourglass: new layer.Video('assets/intro/hourglass.mp4', { loop: true, autoplay: true }),
+        intro_dunes: new layer.Image('assets/intro/dunes.jpg'),
+        intro_crab: new layer.Video('assets/intro/crab.mp4'),
+        intro_sea: new layer.Video('assets/intro/sea.mp4'),
+        intro_hand: new layer.Video('assets/intro/hand.mp4'),
+        intro_shell: new layer.Composite([
+            new layer.Image('assets/intro/shell.jpg'),
+            new layer.Click_Mask('assets/intro/shell_mask.png', 'pickup')
+        ]),
+        intro_shell_pickup: new layer.Video('assets/intro/shell_pickup.mp4'),
+        intro_welcome: new layer.Video('assets/intro/welcome.mp4', { loop: true }),
+        intro_load: new layer.Video('assets/intro/jellyload.mp4'),
+        // Character selection
+        character_background: new layer.Video('assets/character/background.mp4', { loop: true }),
+        character_characters: new layer.GIF('assets/character/characters.gif')
     };
     var views = {
-        loading: [
-            layers.hourglass
-        ],
-        start: [
-            layers.startscreen,
-            new layer.Click_Anywhere({ on_click: 'continue' })
-        ],
-        intro1: [
-            layers.crab
-        ]
+        loading: layers.intro_hourglass,
+        intro_dunes: new layer.Composite([
+            layers.intro_dunes,
+            new layer.Click_Anywhere('continue')
+        ]),
+        intro_crab: layers.intro_crab,
+        intro_crab_nav: new layer.Composite([
+            layers.intro_crab,
+            layers.nav_rewind,
+            layers.nav_next
+        ]),
+        intro_sea: layers.intro_sea,
+        intro_sea_nav: new layer.Composite([
+            layers.intro_sea,
+            layers.nav_rewind,
+            layers.nav_next
+        ]),
+        intro_hand: layers.intro_hand,
+        intro_hand_nav: new layer.Composite([
+            layers.intro_hand,
+            layers.nav_rewind,
+            layers.nav_next
+        ]),
+        intro_shell: layers.intro_shell,
+        intro_shell_pickup: layers.intro_shell_pickup,
+        intro_welcome: new layer.Composite([
+            layers.intro_welcome,
+            layers.nav_next
+        ]),
+        intro_load: layers.intro_load,
+        intro_character: new layer.Composite([
+            layers.character_background,
+            layers.character_characters
+        ])
     };
     var events = {
         loading: {
-            loaded: function () { return 'start'; }
-        },
-        start: {
-            continue: function () {
-                layers.crab.play();
-                return 'intro1';
+            loaded: function () {
+                layers.intro_hourglass.stop();
+                return 'intro_dunes';
             }
         },
-        intro1: {}
+        intro_dunes: {
+            continue: function () {
+                layers.intro_crab.start();
+                return 'intro_crab';
+            }
+        },
+        intro_crab: {
+            finish: function () { return 'intro_crab_nav'; }
+        },
+        intro_crab_nav: {
+            rewind: function () {
+                layers.intro_crab.start();
+                return 'intro_crab';
+            },
+            next: function () {
+                layers.intro_sea.start();
+                return 'intro_sea';
+            }
+        },
+        intro_sea: {
+            finish: function () { return 'intro_sea_nav'; }
+        },
+        intro_sea_nav: {
+            rewind: function () {
+                layers.intro_sea.start();
+                return 'intro_sea';
+            },
+            next: function () {
+                layers.intro_hand.start();
+                return 'intro_hand';
+            }
+        },
+        intro_hand: {
+            finish: function () { return 'intro_hand_nav'; }
+        },
+        intro_hand_nav: {
+            rewind: function () {
+                layers.intro_hand.start();
+                return 'intro_hand';
+            },
+            next: function () { return 'intro_shell'; }
+        },
+        intro_shell: {
+            pickup: function () {
+                layers.intro_shell_pickup.start();
+                return 'intro_shell_pickup';
+            }
+        },
+        intro_shell_pickup: {
+            finish: function () {
+                layers.intro_welcome.start();
+                return 'intro_welcome';
+            }
+        },
+        intro_welcome: {
+            next: function () {
+                layers.intro_welcome.stop();
+                layers.intro_load.start();
+                return 'intro_load';
+            }
+        },
+        intro_load: {
+            finish: function () {
+                layers.intro_hourglass.stop();
+                layers.character_background.start();
+                layers.character_characters.start();
+                return 'intro_character';
+            }
+        },
+        intro_character: {}
     };
     exports.story = new story_1.Story(views, events, 'loading');
     function start() {
@@ -412,7 +604,7 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
                 switch (_a.label) {
                     case 0: 
                     // First load the load animation.
-                    return [4 /*yield*/, layers.hourglass.load()
+                    return [4 /*yield*/, layers.intro_hourglass.load()
                         // Then load all other assets.
                     ];
                     case 1:
@@ -433,7 +625,7 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
 });
 // Main Program
 // ============
-define("main", ["require", "exports", "math", "game"], function (require, exports, m, game_1) {
+define("main", ["require", "exports", "util/math", "game"], function (require, exports, m, game_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     // Auto-playing video with sound is allowed after user interaction:
@@ -450,7 +642,7 @@ define("main", ["require", "exports", "math", "game"], function (require, export
     function coordinate(e) {
         var b = m.dom_bounding_box(canvas);
         var v = m.client_position(e);
-        return v.minus(b.position).times(b.size.inv());
+        return v.minus(b.position).times(b.size.inv()).times(size);
     }
     canvas.addEventListener('pointerdown', function (e) {
         game_1.story.pointer_down(coordinate(e));
@@ -464,8 +656,9 @@ define("main", ["require", "exports", "math", "game"], function (require, export
     // Setup continuous render cycle
     // -----------------------------
     function draw() {
-        ctx.clearRect(0, 0, size.x, size.y);
-        game_1.story.draw(ctx, size);
+        // Don't clear to prevent flashes between views.
+        //ctx.clearRect(0, 0, size.x, size.y)
+        game_1.story.draw(ctx);
         requestAnimationFrame(draw);
     }
     draw();

@@ -1,7 +1,7 @@
 // Main Program
 // ============
 
-import * as m from './math'
+import * as m from './util/math'
 import { story, start } from './game'
 
 // Auto-playing video with sound is allowed after user interaction:
@@ -23,7 +23,7 @@ const ctx = canvas.getContext("2d")!
 function coordinate(e: PointerEvent) {
   const b = m.dom_bounding_box(canvas)
   const v = m.client_position(e)
-  return v.minus(b.position).times(b.size.inv())
+  return v.minus(b.position).times(b.size.inv()).times(size)
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -42,8 +42,9 @@ canvas.addEventListener('pointerup', (e) => {
 // -----------------------------
 
 function draw() {
-  ctx.clearRect(0, 0, size.x, size.y)
-  story.draw(ctx, size)
+  // Don't clear to prevent flashes between views.
+  //ctx.clearRect(0, 0, size.x, size.y)
+  story.draw(ctx)
   requestAnimationFrame(draw)
 }
 

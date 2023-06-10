@@ -1,22 +1,17 @@
 // Interactive Story Based on Layers
 // =================================
 
-import * as m from './math'
+import * as m from './util/math'
 
 export type View_Map<View_Id extends string | number> =
-  { [id in View_Id]: Layer[] }
+  { [id in View_Id]: Layer }
 
 export type Event_Map<View_Id extends string | number> =
   { [view in View_Id]: { [event: string]: () => View_Id | void } }
 
-export interface Story<View_Id extends string | number> {
-  views: View_Map<View_Id>
-  events: Event_Map<View_Id>
-}
-
 export interface Layer {
   load(): Promise<void>
-  draw(ctx: CanvasRenderingContext2D, size: m.vec2): string | null
+  draw(ctx: CanvasRenderingContext2D): string | null
   pointer_down(v: m.vec2): string | null
   pointer_move(v: m.vec2): string | null
   pointer_up(v: m.vec2): string | null
@@ -29,25 +24,21 @@ export class Story<View_Id extends string | number> {
     public current_view: View_Id) { }
 
   handle(event: string) {
-    let cb = this.events[this.current_view][event]
-    if (cb != undefined) {
-      this.current_view = cb() || this.current_view
+    let callback = this.events[this.current_view][event]
+    if (callback != undefined) {
+      this.current_view = callback() || this.current_view
     }
   }
 
   private run(f: (l: Layer) => string | null) {
-    let event: string | null = null
-    for (let layer of this.views[this.current_view]) {
-      const f_event = f(layer)
-      event = event || f_event
-    }
-    if (event !== null) {
+    let event = f(this.views[this.current_view])
+    if (event != null) {
       this.handle(event)
     }
   }
 
-  draw(ctx: CanvasRenderingContext2D, size: m.vec2) {
-    this.run((layer) => layer.draw(ctx, size))
+  draw(ctx: CanvasRenderingContext2D) {
+    this.run((layer) => layer.draw(ctx))
   }
 
   pointer_down(v: m.vec2) {
