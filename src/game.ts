@@ -17,7 +17,7 @@ const layers = {
   ]),
 
   // Introduction
-  intro_hourglass: new layer.Video('assets/intro/hourglass.mp4', { loop: true, autoplay: true }),
+  intro_hourglass: new layer.Video('assets/intro/hourglass.mp4', { loop: true }),
   intro_dunes: new layer.Image('assets/intro/dunes.jpg'),
   intro_crab: new layer.Video('assets/intro/crab.mp4'),
   intro_sea: new layer.Video('assets/intro/sea.mp4'),
@@ -157,8 +157,15 @@ export const story = new Story<keyof typeof views>(
 export async function start() {
   // First load the load animation.
   await layers.intro_hourglass.load()
+  layers.intro_hourglass.start()
 
   // Then load all other assets.
-  await Promise.all(Object.values(layers).map((l: Layer) => l.load()))
+  const promises: Promise<void>[] = []
+  for (let l in layers) {
+    if (l != 'intro_hourglass') {
+      promises.push(layers[l].load())
+    }
+  }
+  await Promise.all(promises)
   story.handle('loaded')
 }

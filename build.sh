@@ -2,7 +2,7 @@
 
 function build {
   echo "Rebuilding TypeScript."
-  tsc src/*.ts --outFile build/main.js --lib es2017,dom --module amd
+  tsc src/*.ts --outFile build/main.js --lib es2015,dom --module amd
 }
 
 build

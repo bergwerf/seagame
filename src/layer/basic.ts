@@ -98,13 +98,11 @@ export class Video implements Layer {
   constructor(public src: string, {
     on_finish = 'finish',
     muted = true,
-    loop = false,
-    autoplay = false } = {}) {
+    loop = false } = {}) {
     this.finish_event = on_finish
     this.video = document.createElement("video")
     this.video.muted = muted
     this.video.loop = loop
-    this.video.autoplay = autoplay
   }
 
   async load() {

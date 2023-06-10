@@ -306,13 +306,12 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
     exports.Image = Image;
     var Video = /** @class */ (function () {
         function Video(src, _a) {
-            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.muted, muted = _d === void 0 ? true : _d, _e = _b.loop, loop = _e === void 0 ? false : _e, _f = _b.autoplay, autoplay = _f === void 0 ? false : _f;
+            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.muted, muted = _d === void 0 ? true : _d, _e = _b.loop, loop = _e === void 0 ? false : _e;
             this.src = src;
             this.finish_event = on_finish;
             this.video = document.createElement("video");
             this.video.muted = muted;
             this.video.loop = loop;
-            this.video.autoplay = autoplay;
         }
         Video.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
@@ -468,7 +467,7 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
             new layer.Click_Mask('assets/nav/next_mask.png', 'next')
         ]),
         // Introduction
-        intro_hourglass: new layer.Video('assets/intro/hourglass.mp4', { loop: true, autoplay: true }),
+        intro_hourglass: new layer.Video('assets/intro/hourglass.mp4', { loop: true }),
         intro_dunes: new layer.Image('assets/intro/dunes.jpg'),
         intro_crab: new layer.Video('assets/intro/crab.mp4'),
         intro_sea: new layer.Video('assets/intro/sea.mp4'),
@@ -601,20 +600,24 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
     exports.story = new story_1.Story(views, events, 'loading');
     function start() {
         return __awaiter(this, void 0, void 0, function () {
+            var promises, l;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: 
                     // First load the load animation.
-                    return [4 /*yield*/, layers.intro_hourglass.load()
-                        // Then load all other assets.
-                    ];
+                    return [4 /*yield*/, layers.intro_hourglass.load()];
                     case 1:
                         // First load the load animation.
                         _a.sent();
-                        // Then load all other assets.
-                        return [4 /*yield*/, Promise.all(Object.values(layers).map(function (l) { return l.load(); }))];
+                        layers.intro_hourglass.start();
+                        promises = [];
+                        for (l in layers) {
+                            if (l != 'intro_hourglass') {
+                                promises.push(layers[l].load());
+                            }
+                        }
+                        return [4 /*yield*/, Promise.all(promises)];
                     case 2:
-                        // Then load all other assets.
                         _a.sent();
                         exports.story.handle('loaded');
                         return [2 /*return*/];
