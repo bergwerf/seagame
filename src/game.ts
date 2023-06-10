@@ -2,63 +2,40 @@
 // ==========
 
 import * as m from './math'
-import * as layer from './layer'
+import { Image_Layer, Video_Layer } from './layer/basic'
+import { View_Map, Event_Map, Story } from './story'
 
-enum View {
-  Loading,
-  Intro,
-  Character,
-  Walk
+const layer = {
+  bunny: new Video_Layer('assets/bunny.mp4'),
+  startscherm: new Image_Layer('assets/Startscherm.jpg')
 }
 
-export class Seagame implements layer.Layer {
-  layer_bunny = new layer.VideoLayer('assets/bunny.mp4')
-  layer_loading = new layer.ImageLayer('assets/loading.jpg')
-  layer_start = new layer.ImageLayer('assets/start.jpg')
-  layer_intro = new layer.VideoLayer('assets/intro.mp4')
-  layer_navigation = new layer.ImageLayer('assets/navigation.jpg')
+type Views = 'loading' | 'intro'
 
-  view = View.Loading
-  layers = [
-    this.layer_bunny
+const views: View_Map<Views> = {
+  loading: [
+    layer.bunny
+  ],
+  intro: [
+    layer.startscherm
   ]
+}
 
-  async load() {
-    await Promise.all([
-      this.layer_bunny.load()
-    ])
+const events: Event_Map<keyof typeof views> = {
+  loading: {
+    loaded: () => layer.bunny.play(),
+    finish: () => 'intro'
+  },
+  intro: {}
+}
+
+export const story = new Story(views, events, 'loading')
+
+export async function start() {
+  const promises: Promise<void>[] = []
+  for (let s in layer) {
+    promises.push(layer[s].load())
   }
-
-  reset() { }
-
-  update(event: string) {
-    switch (this.view) {
-      case View.Loading:
-        switch (event) {
-          case 'loaded':
-            this.layer_bunny.video.play()
-            break
-        }
-        break
-    }
-  }
-
-  draw(ctx: CanvasRenderingContext2D, size: m.vec2) {
-    for (let layer of this.layers) {
-      layer.draw(ctx, size)
-    }
-    return null
-  }
-
-  pointer_down(v: m.vec2) {
-    return null
-  }
-
-  pointer_move(v: m.vec2) {
-    return null
-  }
-
-  pointer_up(v: m.vec2) {
-    return null
-  }
+  await Promise.all(promises)
+  story.handle('loaded')
 }

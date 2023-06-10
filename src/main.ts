@@ -2,13 +2,12 @@
 // ============
 
 import * as m from './math'
-import { Seagame } from './game'
+import { story, start } from './game'
 
 // Auto-playing video with sound is allowed after user interaction:
 // https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide
 
 const size = m.vec2(1920, 1080)
-const game = new Seagame()
 
 // Setup canvas
 // ------------
@@ -28,26 +27,25 @@ function coordinate(e: PointerEvent) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  game.pointer_down(coordinate(e))
+  story.pointer_down(coordinate(e))
 })
 
 canvas.addEventListener('pointermove', (e) => {
-  game.pointer_move(coordinate(e))
+  story.pointer_move(coordinate(e))
 })
 
 canvas.addEventListener('pointerup', (e) => {
-  game.pointer_up(coordinate(e))
+  story.pointer_up(coordinate(e))
 })
 
 // Setup continuous render cycle
 // -----------------------------
 
 function draw() {
-  game.draw(ctx, size)
+  ctx.clearRect(0, 0, size.x, size.y)
+  story.draw(ctx, size)
   requestAnimationFrame(draw)
 }
 
 draw()
-
-// Start loading the game.
-game.load().then(() => game.update('loaded'))
+start()
