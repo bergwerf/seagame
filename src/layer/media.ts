@@ -4,7 +4,7 @@
 import '../util/gifler'
 import * as m from '../util/math'
 import * as canvas from '../util/canvas'
-import { Event, Layer } from '../story'
+import { Layer, Trigger } from '../story'
 
 export class Image implements Layer {
   private image: HTMLImageElement
@@ -42,6 +42,7 @@ export class Video implements Layer {
     this.video = document.createElement("video")
     this.video.muted = muted
     this.video.loop = loop
+    this.video.style.display = 'none'
   }
 
   async load() {
@@ -77,13 +78,8 @@ export class Video implements Layer {
     } else {
       ctx.drawImage(this.video, 0, 0)
     }
-    // Return event when a non-looped video ends.
-    if (this.video.loop) {
-      return null
-    } else {
-      const finish = this.video.currentTime == this.video.duration
-      return finish ? this.finish_event : null
-    }
+    // Return event when video has ended.
+    return this.video.ended ? this.finish_event : null
   }
 
   handle() { return null }
@@ -103,6 +99,7 @@ export class GIF implements Layer {
   }
 
   start() {
+    this.anim.reset()
     this.anim.start()
   }
 

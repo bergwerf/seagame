@@ -9,12 +9,12 @@ export type View_Map<View_Id extends string | number> =
 export type Event_Map<View_Id extends string | number> =
   { [view in View_Id]: { [event: string]: () => View_Id | void } }
 
-export enum Event { Down, Move, Up }
+export enum Trigger { Down, Move, Up }
 
 export interface Layer {
   load(): Promise<void>
   draw(ctx: CanvasRenderingContext2D): string | null
-  handle(v: m.vec2, e: Event): string | null
+  handle(v: m.vec2, t: Trigger): string | null
 }
 
 export class Story<View_Id extends string | number> {
@@ -41,7 +41,7 @@ export class Story<View_Id extends string | number> {
     this.run((layer) => layer.draw(ctx))
   }
 
-  handle(v: m.vec2, e: Event) {
-    this.run((layer) => layer.handle(v, e))
+  handle(v: m.vec2, t: Trigger) {
+    this.run((layer) => layer.handle(v, t))
   }
 }

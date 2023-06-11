@@ -3,7 +3,7 @@
 
 import * as m from '../util/math'
 import * as canvas from '../util/canvas'
-import { Event, Layer } from '../story'
+import { Layer, Trigger } from '../story'
 
 export class Switch implements Layer {
   public index = -1
@@ -18,8 +18,8 @@ export class Switch implements Layer {
     return this.index >= 0 ? this.layers[this.index].draw(ctx) : null
   }
 
-  handle(v: m.vec2, e: Event) {
-    return this.index >= 0 ? this.layers[this.index].handle(v, e) : null
+  handle(v: m.vec2, t: Trigger) {
+    return this.index >= 0 ? this.layers[this.index].handle(v, t) : null
   }
 }
 
@@ -43,18 +43,18 @@ export class Composite implements Layer {
     return this.run((layer) => layer.draw(ctx))
   }
 
-  handle(v: m.vec2, e: Event) {
-    return this.run((layer) => layer.handle(v, e))
+  handle(v: m.vec2, t: Trigger) {
+    return this.run((layer) => layer.handle(v, t))
   }
 }
 
 export class Click_Anywhere implements Layer {
   constructor(
     public event_name: string,
-    public event_trigger: Event = Event.Up) { }
+    public event_trigger: Trigger = Trigger.Up) { }
 
-  handle(v: m.vec2, e: Event) {
-    return e == this.event_trigger ? this.event_name : null
+  handle(v: m.vec2, t: Trigger) {
+    return t == this.event_trigger ? this.event_name : null
   }
 
   async load() { }
@@ -67,14 +67,14 @@ export class Click_Mask implements Layer {
   constructor(
     public src: string,
     public event_name: string,
-    public event_trigger: Event = Event.Up) { }
+    public event_trigger: Trigger = Trigger.Up) { }
 
   async load() {
     this.mask = await canvas.load_image_data(this.src)
   }
 
-  handle(v: m.vec2, e: Event) {
-    if (e == this.event_trigger) {
+  handle(v: m.vec2, t: Trigger) {
+    if (t == this.event_trigger) {
       const c = canvas.lookup_pixel(this.mask, v.floor())
       return c[0] > 0 ? this.event_name : null
     }

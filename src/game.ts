@@ -3,7 +3,14 @@
 
 import * as m from './util/math'
 import * as layer from './layer/all'
-import { Story, Layer, Event_Map } from './story'
+import { Story, Layer, Trigger, Event_Map } from './story'
+
+function garden_item_layer(name: string) {
+  return new layer.Composite([
+    new layer.Image(`assets/garden/items/${name}.png`),
+    new layer.Click_Mask(`assets/garden/items/${name}_mask.png`, 'drag', Trigger.Down),
+  ])
+}
 
 const layers = {
   // Navigation
@@ -45,7 +52,7 @@ const layers = {
   ]),
   character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
 
-  // Landscape
+  // Side-scroll landscape
   landscape_bg1: new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
   landscape_bg2: new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
   landscape_bg3: new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true }),
@@ -57,7 +64,22 @@ const layers = {
     new layer.Image('assets/landscape/button_right.png'),
     new layer.Click_Mask('assets/landscape/button_left_mask.png', 'left'),
     new layer.Click_Mask('assets/landscape/button_right_mask.png', 'right')
-  ])
+  ]),
+
+  // Garden minigame
+  garden_intro: new layer.Video('assets/garden/intro.mp4', { muted: false, loop: true }),
+  garden_start: new layer.Click_Mask('assets/garden/start_mask.png', 'start'),
+  garden_background: new layer.Image('assets/garden/background.png'),
+  garden_trashcan: new layer.GIF('assets/garden/trashcan.gif'),
+  garden_trashcan_mask: new layer.Click_Mask('assets/garden/trashcan_mask.png', 'drop', Trigger.Up),
+  garden_item1: garden_item_layer('bag'),
+  garden_item2: garden_item_layer('can'),
+  garden_item3: garden_item_layer('carton'),
+  garden_item4: garden_item_layer('cup'),
+  garden_item5: garden_item_layer('fish'),
+  garden_item6: garden_item_layer('lamp'),
+  garden_item7: garden_item_layer('paper'),
+  garden_item8: garden_item_layer('spoon'),
 }
 
 const views = {
@@ -98,6 +120,7 @@ const views = {
     layers.character_mask,
     layers.character_start_mask
   ]),
+
   landscape: new layer.Sidescroll(
     new layer.Composite([
       layers.landscape_bg,
@@ -105,11 +128,39 @@ const views = {
       layers.landscape_rmask
     ]),
     layers.landscape_nav,
-    5760, 1920),
+    5760, 1920, -1950),
+
+  garden_intro: new layer.Composite([
+    layers.garden_intro,
+    layers.garden_start
+  ]),
+  garden_game: new layer.Composite([
+    layers.garden_background,
+    layers.garden_trashcan,
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item1, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item2, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item3, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item4, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item5, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item6, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
+    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
+  ])
 }
 
 const audio = {
   sea: new Audio('assets/sound/sea.mp3')
+}
+
+const state = {
+  cleanup: 0
+}
+
+function play_garden_trashcan_once() {
+  layers.garden_trashcan.start()
+  window.setTimeout(() => {
+    layers.garden_trashcan.stop()
+  }, 1220)
 }
 
 function set_character(color: string) {
@@ -189,9 +240,10 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_load: {
     finish: () => {
-      layers.intro_hourglass.stop()
+      layers.intro_load.stop()
       layers.character_background.start()
       layers.character_characters.start()
+      set_character('yellow')
       return 'intro_character'
     }
   },
@@ -206,6 +258,8 @@ const events: Event_Map<keyof typeof views> = {
       set_character('green')
     },
     start: () => {
+      layers.character_background.stop()
+      layers.character_characters.stop()
       layers.landscape_bg.layers = [
         layers.landscape_bg1,
         layers.landscape_bg2,
@@ -218,10 +272,23 @@ const events: Event_Map<keyof typeof views> = {
   },
   landscape: {
     farmer_left: () => {
-      console.log("farmer left")
     },
     farmer_right: () => {
-      console.log("farmer right")
+      layers.garden_intro.start()
+      return 'garden_intro'
+    }
+  },
+  garden_intro: {
+    start: () => {
+      layers.garden_intro.stop()
+      play_garden_trashcan_once()
+      return 'garden_game'
+    }
+  },
+  garden_game: {
+    trash: () => {
+      play_garden_trashcan_once()
+      state.cleanup++
     }
   }
 }

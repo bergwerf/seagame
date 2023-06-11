@@ -7,6 +7,7 @@ declare global {
   }
 
   export interface Animator {
+    reset(): void
     start(): void
     stop(): void
     animateInCanvas(canvas: HTMLCanvasElement): void

@@ -2,7 +2,7 @@
 // ============
 
 import * as m from './util/math'
-import { Event } from './story'
+import { Trigger } from './story'
 import { story, start } from './game'
 
 // Auto-playing video with sound is allowed after user interaction:
@@ -28,15 +28,23 @@ function coordinate(e: PointerEvent) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  story.handle(coordinate(e), Event.Down)
+  story.handle(coordinate(e), Trigger.Down)
 })
 
 canvas.addEventListener('pointermove', (e) => {
-  story.handle(coordinate(e), Event.Move)
+  story.handle(coordinate(e), Trigger.Move)
+})
+
+canvas.addEventListener('pointercancel', (e) => {
+  story.handle(coordinate(e), Trigger.Up)
+})
+
+canvas.addEventListener('pointerout', (e) => {
+  story.handle(coordinate(e), Trigger.Up)
 })
 
 canvas.addEventListener('pointerup', (e) => {
-  story.handle(coordinate(e), Event.Up)
+  story.handle(coordinate(e), Trigger.Up)
 })
 
 // Setup continuous render cycle

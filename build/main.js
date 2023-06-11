@@ -174,13 +174,13 @@ define("util/canvas", ["require", "exports"], function (require, exports) {
 define("story", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Story = exports.Event = void 0;
-    var Event;
-    (function (Event) {
-        Event[Event["Down"] = 0] = "Down";
-        Event[Event["Move"] = 1] = "Move";
-        Event[Event["Up"] = 2] = "Up";
-    })(Event || (exports.Event = Event = {}));
+    exports.Story = exports.Trigger = void 0;
+    var Trigger;
+    (function (Trigger) {
+        Trigger[Trigger["Down"] = 0] = "Down";
+        Trigger[Trigger["Move"] = 1] = "Move";
+        Trigger[Trigger["Up"] = 2] = "Up";
+    })(Trigger || (exports.Trigger = Trigger = {}));
     var Story = /** @class */ (function () {
         function Story(views, events, current_view) {
             this.views = views;
@@ -202,8 +202,8 @@ define("story", ["require", "exports"], function (require, exports) {
         Story.prototype.draw = function (ctx) {
             this.run(function (layer) { return layer.draw(ctx); });
         };
-        Story.prototype.handle = function (v, e) {
-            this.run(function (layer) { return layer.handle(v, e); });
+        Story.prototype.handle = function (v, t) {
+            this.run(function (layer) { return layer.handle(v, t); });
         };
         return Story;
     }());
@@ -235,8 +235,8 @@ define("layer/basic", ["require", "exports", "util/canvas", "story"], function (
         Switch.prototype.draw = function (ctx) {
             return this.index >= 0 ? this.layers[this.index].draw(ctx) : null;
         };
-        Switch.prototype.handle = function (v, e) {
-            return this.index >= 0 ? this.layers[this.index].handle(v, e) : null;
+        Switch.prototype.handle = function (v, t) {
+            return this.index >= 0 ? this.layers[this.index].handle(v, t) : null;
         };
         return Switch;
     }());
@@ -269,20 +269,20 @@ define("layer/basic", ["require", "exports", "util/canvas", "story"], function (
         Composite.prototype.draw = function (ctx) {
             return this.run(function (layer) { return layer.draw(ctx); });
         };
-        Composite.prototype.handle = function (v, e) {
-            return this.run(function (layer) { return layer.handle(v, e); });
+        Composite.prototype.handle = function (v, t) {
+            return this.run(function (layer) { return layer.handle(v, t); });
         };
         return Composite;
     }());
     exports.Composite = Composite;
     var Click_Anywhere = /** @class */ (function () {
         function Click_Anywhere(event_name, event_trigger) {
-            if (event_trigger === void 0) { event_trigger = story_1.Event.Up; }
+            if (event_trigger === void 0) { event_trigger = story_1.Trigger.Up; }
             this.event_name = event_name;
             this.event_trigger = event_trigger;
         }
-        Click_Anywhere.prototype.handle = function (v, e) {
-            return e == this.event_trigger ? this.event_name : null;
+        Click_Anywhere.prototype.handle = function (v, t) {
+            return t == this.event_trigger ? this.event_name : null;
         };
         Click_Anywhere.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
@@ -295,7 +295,7 @@ define("layer/basic", ["require", "exports", "util/canvas", "story"], function (
     exports.Click_Anywhere = Click_Anywhere;
     var Click_Mask = /** @class */ (function () {
         function Click_Mask(src, event_name, event_trigger) {
-            if (event_trigger === void 0) { event_trigger = story_1.Event.Up; }
+            if (event_trigger === void 0) { event_trigger = story_1.Trigger.Up; }
             this.src = src;
             this.event_name = event_name;
             this.event_trigger = event_trigger;
@@ -315,8 +315,8 @@ define("layer/basic", ["require", "exports", "util/canvas", "story"], function (
                 });
             });
         };
-        Click_Mask.prototype.handle = function (v, e) {
-            if (e == this.event_trigger) {
+        Click_Mask.prototype.handle = function (v, t) {
+            if (t == this.event_trigger) {
                 var c = canvas.lookup_pixel(this.mask, v.floor());
                 return c[0] > 0 ? this.event_name : null;
             }
@@ -365,6 +365,7 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
             this.video = document.createElement("video");
             this.video.muted = muted;
             this.video.loop = loop;
+            this.video.style.display = 'none';
         }
         Video.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
@@ -402,14 +403,8 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
             else {
                 ctx.drawImage(this.video, 0, 0);
             }
-            // Return event when a non-looped video ends.
-            if (this.video.loop) {
-                return null;
-            }
-            else {
-                var finish = this.video.currentTime == this.video.duration;
-                return finish ? this.finish_event : null;
-            }
+            // Return event when video has ended.
+            return this.video.ended ? this.finish_event : null;
         };
         Video.prototype.handle = function () { return null; };
         return Video;
@@ -438,6 +433,7 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
             });
         };
         GIF.prototype.start = function () {
+            this.anim.reset();
             this.anim.start();
         };
         GIF.prototype.stop = function () {
@@ -459,13 +455,14 @@ define("layer/scroll", ["require", "exports", "util/math"], function (require, e
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Sidescroll = void 0;
     var Sidescroll = /** @class */ (function () {
-        function Sidescroll(bg, nav, bg_width, view_width) {
+        function Sidescroll(bg, nav, bg_width, view_width, x) {
+            if (x === void 0) { x = 0; }
             this.bg = bg;
             this.nav = nav;
             this.bg_width = bg_width;
             this.view_width = view_width;
+            this.x = x;
             this.step = 200;
-            this.x = 0;
         }
         Sidescroll.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
@@ -490,8 +487,8 @@ define("layer/scroll", ["require", "exports", "util/math"], function (require, e
             this.nav.draw(ctx);
             return null;
         };
-        Sidescroll.prototype.handle = function (v, e) {
-            var nav_result = this.nav.handle(v, e);
+        Sidescroll.prototype.handle = function (v, t) {
+            var nav_result = this.nav.handle(v, t);
             if (nav_result != null) {
                 var dx = nav_result == 'left' ? 1 : nav_result == 'right' ? -1 : 0;
                 this.x += this.step * dx;
@@ -499,17 +496,90 @@ define("layer/scroll", ["require", "exports", "util/math"], function (require, e
                 return null;
             }
             else {
-                return this.bg.handle(v.plus(m.vec2(-this.x, 0)), e);
+                return this.bg.handle(v.plus(m.vec2(-this.x, 0)), t);
             }
         };
         return Sidescroll;
     }());
     exports.Sidescroll = Sidescroll;
 });
-define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/scroll"], function (require, exports, basic_1, media_1, scroll_1) {
+// Drag and Drop Layer
+// ===================
+define("layer/dnd", ["require", "exports", "util/math", "story"], function (require, exports, m, story_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Sidescroll = exports.Video = exports.GIF = exports.Image = exports.Click_Mask = exports.Click_Anywhere = exports.Composite = exports.Switch = void 0;
+    exports.DragToTarget = void 0;
+    var DragToTarget = /** @class */ (function () {
+        function DragToTarget(target, item, ready_event_name) {
+            this.target = target;
+            this.item = item;
+            this.ready_event_name = ready_event_name;
+            this.offset = m.v00;
+            this.prev = m.v00;
+            this.dragging = false;
+            this.done = false;
+        }
+        DragToTarget.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, this.target.load()];
+                        case 1:
+                            _a.sent();
+                            return [4 /*yield*/, this.item.load()];
+                        case 2:
+                            _a.sent();
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        };
+        DragToTarget.prototype.draw = function (ctx) {
+            if (!this.done) {
+                ctx.save();
+                ctx.translate(this.offset.x, this.offset.y);
+                this.item.draw(ctx);
+                ctx.restore();
+            }
+            return null;
+        };
+        DragToTarget.prototype.handle = function (v, t) {
+            if (this.done) {
+                return null;
+            }
+            switch (t) {
+                case story_2.Trigger.Down:
+                    if (this.item.handle(v.minus(this.offset), t) == 'drag') {
+                        this.prev = v;
+                        this.dragging = true;
+                    }
+                    break;
+                case story_2.Trigger.Move:
+                    if (this.dragging) {
+                        var delta = this.prev.to(v);
+                        this.offset = this.offset.plus(delta);
+                        this.prev = v;
+                    }
+                    break;
+                case story_2.Trigger.Up:
+                    if (this.dragging) {
+                        this.dragging = false;
+                        if (this.target.handle(v, t) == 'drop') {
+                            this.done = true;
+                            return this.ready_event_name;
+                        }
+                    }
+            }
+            return null;
+        };
+        return DragToTarget;
+    }());
+    exports.DragToTarget = DragToTarget;
+});
+define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/scroll", "layer/dnd"], function (require, exports, basic_1, media_1, scroll_1, dnd_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.DragToTarget = exports.Sidescroll = exports.Video = exports.GIF = exports.Image = exports.Click_Mask = exports.Click_Anywhere = exports.Composite = exports.Switch = void 0;
     Object.defineProperty(exports, "Switch", { enumerable: true, get: function () { return basic_1.Switch; } });
     Object.defineProperty(exports, "Composite", { enumerable: true, get: function () { return basic_1.Composite; } });
     Object.defineProperty(exports, "Click_Anywhere", { enumerable: true, get: function () { return basic_1.Click_Anywhere; } });
@@ -518,13 +588,20 @@ define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/
     Object.defineProperty(exports, "GIF", { enumerable: true, get: function () { return media_1.GIF; } });
     Object.defineProperty(exports, "Video", { enumerable: true, get: function () { return media_1.Video; } });
     Object.defineProperty(exports, "Sidescroll", { enumerable: true, get: function () { return scroll_1.Sidescroll; } });
+    Object.defineProperty(exports, "DragToTarget", { enumerable: true, get: function () { return dnd_1.DragToTarget; } });
 });
 // Game Logic
 // ==========
-define("game", ["require", "exports", "layer/all", "story"], function (require, exports, layer, story_2) {
+define("game", ["require", "exports", "layer/all", "story"], function (require, exports, layer, story_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.start = exports.story = void 0;
+    function garden_item_layer(name) {
+        return new layer.Composite([
+            new layer.Image("assets/garden/items/".concat(name, ".png")),
+            new layer.Click_Mask("assets/garden/items/".concat(name, "_mask.png"), 'drag', story_3.Trigger.Down),
+        ]);
+    }
     var layers = {
         // Navigation
         nav_rewind: new layer.Composite([
@@ -562,7 +639,7 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
             new layer.Click_Mask('assets/character/green_mask.png', 'green')
         ]),
         character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
-        // Landscape
+        // Side-scroll landscape
         landscape_bg1: new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
         landscape_bg2: new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
         landscape_bg3: new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true }),
@@ -574,7 +651,21 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
             new layer.Image('assets/landscape/button_right.png'),
             new layer.Click_Mask('assets/landscape/button_left_mask.png', 'left'),
             new layer.Click_Mask('assets/landscape/button_right_mask.png', 'right')
-        ])
+        ]),
+        // Garden minigame
+        garden_intro: new layer.Video('assets/garden/intro.mp4', { muted: false, loop: true }),
+        garden_start: new layer.Click_Mask('assets/garden/start_mask.png', 'start'),
+        garden_background: new layer.Image('assets/garden/background.png'),
+        garden_trashcan: new layer.GIF('assets/garden/trashcan.gif'),
+        garden_trashcan_mask: new layer.Click_Mask('assets/garden/trashcan_mask.png', 'drop', story_3.Trigger.Up),
+        garden_item1: garden_item_layer('bag'),
+        garden_item2: garden_item_layer('can'),
+        garden_item3: garden_item_layer('carton'),
+        garden_item4: garden_item_layer('cup'),
+        garden_item5: garden_item_layer('fish'),
+        garden_item6: garden_item_layer('lamp'),
+        garden_item7: garden_item_layer('paper'),
+        garden_item8: garden_item_layer('spoon'),
     };
     var views = {
         loading: layers.intro_hourglass,
@@ -618,11 +709,36 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
             layers.landscape_bg,
             layers.landscape_lmask,
             layers.landscape_rmask
-        ]), layers.landscape_nav, 5760, 1920),
+        ]), layers.landscape_nav, 5760, 1920, -1950),
+        garden_intro: new layer.Composite([
+            layers.garden_intro,
+            layers.garden_start
+        ]),
+        garden_game: new layer.Composite([
+            layers.garden_background,
+            layers.garden_trashcan,
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item1, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item2, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item3, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item4, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item5, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item6, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
+            new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
+        ])
     };
     var audio = {
         sea: new Audio('assets/sound/sea.mp3')
     };
+    var state = {
+        cleanup: 0
+    };
+    function play_garden_trashcan_once() {
+        layers.garden_trashcan.start();
+        window.setTimeout(function () {
+            layers.garden_trashcan.stop();
+        }, 1220);
+    }
     function set_character(color) {
         var colors = ['orange', 'yellow', 'green'];
         layers.character_selection.index = colors.indexOf(color);
@@ -699,9 +815,10 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         },
         intro_load: {
             finish: function () {
-                layers.intro_hourglass.stop();
+                layers.intro_load.stop();
                 layers.character_background.start();
                 layers.character_characters.start();
+                set_character('yellow');
                 return 'intro_character';
             }
         },
@@ -716,6 +833,8 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
                 set_character('green');
             },
             start: function () {
+                layers.character_background.stop();
+                layers.character_characters.stop();
                 layers.landscape_bg.layers = [
                     layers.landscape_bg1,
                     layers.landscape_bg2,
@@ -728,14 +847,27 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         },
         landscape: {
             farmer_left: function () {
-                console.log("farmer left");
             },
             farmer_right: function () {
-                console.log("farmer right");
+                layers.garden_intro.start();
+                return 'garden_intro';
+            }
+        },
+        garden_intro: {
+            start: function () {
+                layers.garden_intro.stop();
+                play_garden_trashcan_once();
+                return 'garden_game';
+            }
+        },
+        garden_game: {
+            trash: function () {
+                play_garden_trashcan_once();
+                state.cleanup++;
             }
         }
     };
-    exports.story = new story_2.Story(views, events, 'loading');
+    exports.story = new story_3.Story(views, events, 'loading');
     function start() {
         return __awaiter(this, void 0, void 0, function () {
             var promises, l;
@@ -767,7 +899,7 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
 });
 // Main Program
 // ============
-define("main", ["require", "exports", "util/math", "story", "game"], function (require, exports, m, story_3, game_1) {
+define("main", ["require", "exports", "util/math", "story", "game"], function (require, exports, m, story_4, game_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     // Auto-playing video with sound is allowed after user interaction:
@@ -787,13 +919,19 @@ define("main", ["require", "exports", "util/math", "story", "game"], function (r
         return v.minus(b.position).times(b.size.inv()).times(size);
     }
     canvas.addEventListener('pointerdown', function (e) {
-        game_1.story.handle(coordinate(e), story_3.Event.Down);
+        game_1.story.handle(coordinate(e), story_4.Trigger.Down);
     });
     canvas.addEventListener('pointermove', function (e) {
-        game_1.story.handle(coordinate(e), story_3.Event.Move);
+        game_1.story.handle(coordinate(e), story_4.Trigger.Move);
+    });
+    canvas.addEventListener('pointercancel', function (e) {
+        game_1.story.handle(coordinate(e), story_4.Trigger.Up);
+    });
+    canvas.addEventListener('pointerout', function (e) {
+        game_1.story.handle(coordinate(e), story_4.Trigger.Up);
     });
     canvas.addEventListener('pointerup', function (e) {
-        game_1.story.handle(coordinate(e), story_3.Event.Up);
+        game_1.story.handle(coordinate(e), story_4.Trigger.Up);
     });
     // Setup continuous render cycle
     // -----------------------------
