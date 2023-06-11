@@ -32,7 +32,13 @@ const layers = {
 
   // Character selection
   character_background: new layer.Video('assets/character/background.mp4', { loop: true }),
-  character_characters: new layer.GIF('assets/character/characters.gif')
+  character_characters: new layer.GIF('assets/character/characters.gif'),
+  character_orange: new layer.Switch(new layer.Image('assets/character/orange_selected.png')),
+  character_orange_mask: new layer.Click_Mask('assets/character/orange_mask.png', 'orange'),
+  character_yellow: new layer.Switch(new layer.Image('assets/character/yellow_selected.png')),
+  character_yellow_mask: new layer.Click_Mask('assets/character/yellow_mask.png', 'yellow'),
+  character_green: new layer.Switch(new layer.Image('assets/character/green_selected.png')),
+  character_green_mask: new layer.Click_Mask('assets/character/green_mask.png', 'green'),
 }
 
 const views = {
@@ -68,8 +74,24 @@ const views = {
   intro_load: layers.intro_load,
   intro_character: new layer.Composite([
     layers.character_background,
+    layers.character_orange,
+    layers.character_orange_mask,
+    layers.character_yellow,
+    layers.character_yellow_mask,
+    layers.character_green,
+    layers.character_green_mask,
     layers.character_characters
   ])
+}
+
+const audio = {
+  sea: new Audio('assets/sound/sea.mp3')
+}
+
+function set_character(color: string) {
+  layers.character_orange.active = color == 'orange'
+  layers.character_yellow.active = color == 'yellow'
+  layers.character_green.active = color == 'green'
 }
 
 const events: Event_Map<keyof typeof views> = {
@@ -82,6 +104,8 @@ const events: Event_Map<keyof typeof views> = {
   intro_dunes: {
     continue: () => {
       layers.intro_crab.start()
+      audio.sea.loop = true
+      audio.sea.play()
       return 'intro_crab'
     }
   },
@@ -148,7 +172,17 @@ const events: Event_Map<keyof typeof views> = {
       return 'intro_character'
     }
   },
-  intro_character: {}
+  intro_character: {
+    orange: () => {
+      set_character('orange')
+    },
+    yellow: () => {
+      set_character('yellow')
+    },
+    green: () => {
+      set_character('green')
+    }
+  }
 }
 
 export const story = new Story<keyof typeof views>(

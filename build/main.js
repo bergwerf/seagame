@@ -481,7 +481,13 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
         intro_load: new layer.Video('assets/intro/jellyload.mp4'),
         // Character selection
         character_background: new layer.Video('assets/character/background.mp4', { loop: true }),
-        character_characters: new layer.GIF('assets/character/characters.gif')
+        character_characters: new layer.GIF('assets/character/characters.gif'),
+        character_orange: new layer.Switch(new layer.Image('assets/character/orange_selected.png')),
+        character_orange_mask: new layer.Click_Mask('assets/character/orange_mask.png', 'orange'),
+        character_yellow: new layer.Switch(new layer.Image('assets/character/yellow_selected.png')),
+        character_yellow_mask: new layer.Click_Mask('assets/character/yellow_mask.png', 'yellow'),
+        character_green: new layer.Switch(new layer.Image('assets/character/green_selected.png')),
+        character_green_mask: new layer.Click_Mask('assets/character/green_mask.png', 'green'),
     };
     var views = {
         loading: layers.intro_hourglass,
@@ -516,9 +522,23 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
         intro_load: layers.intro_load,
         intro_character: new layer.Composite([
             layers.character_background,
+            layers.character_orange,
+            layers.character_orange_mask,
+            layers.character_yellow,
+            layers.character_yellow_mask,
+            layers.character_green,
+            layers.character_green_mask,
             layers.character_characters
         ])
     };
+    var audio = {
+        sea: new Audio('assets/sound/sea.mp3')
+    };
+    function set_character(color) {
+        layers.character_orange.active = color == 'orange';
+        layers.character_yellow.active = color == 'yellow';
+        layers.character_green.active = color == 'green';
+    }
     var events = {
         loading: {
             loaded: function () {
@@ -529,6 +549,8 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
         intro_dunes: {
             continue: function () {
                 layers.intro_crab.start();
+                audio.sea.loop = true;
+                audio.sea.play();
                 return 'intro_crab';
             }
         },
@@ -595,7 +617,17 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
                 return 'intro_character';
             }
         },
-        intro_character: {}
+        intro_character: {
+            orange: function () {
+                set_character('orange');
+            },
+            yellow: function () {
+                set_character('yellow');
+            },
+            green: function () {
+                set_character('green');
+            }
+        }
     };
     exports.story = new story_1.Story(views, events, 'loading');
     function start() {

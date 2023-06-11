@@ -7,7 +7,7 @@ import * as canvas from '../util/canvas'
 import { Layer } from '../story'
 
 export class Switch implements Layer {
-  private active = false
+  public active = false
 
   constructor(private layer: Layer) { }
 
