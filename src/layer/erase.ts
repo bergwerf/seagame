@@ -42,6 +42,7 @@ export class Erase_Canvas implements Layer {
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0)'
         this.ctx.fill()
         break
+      case Trigger.Cancel:
       case Trigger.Up:
         this.drawing = false
         const data = this.ctx.getImageData(0, 0, this.image.width, this.image.height).data

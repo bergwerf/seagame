@@ -179,7 +179,8 @@ define("story", ["require", "exports"], function (require, exports) {
     (function (Trigger) {
         Trigger[Trigger["Down"] = 0] = "Down";
         Trigger[Trigger["Move"] = 1] = "Move";
-        Trigger[Trigger["Up"] = 2] = "Up";
+        Trigger[Trigger["Cancel"] = 2] = "Cancel";
+        Trigger[Trigger["Up"] = 3] = "Up";
     })(Trigger || (exports.Trigger = Trigger = {}));
     var Story = /** @class */ (function () {
         function Story(views, events, current_view) {
@@ -561,6 +562,7 @@ define("layer/dnd", ["require", "exports", "util/math", "story"], function (requ
                         this.prev = v;
                     }
                     break;
+                case story_2.Trigger.Cancel:
                 case story_2.Trigger.Up:
                     if (this.dragging) {
                         this.dragging = false;
@@ -1020,10 +1022,10 @@ define("main", ["require", "exports", "util/math", "story", "game"], function (r
         game_1.story.handle(coordinate(e), story_5.Trigger.Move);
     });
     canvas.addEventListener('pointercancel', function (e) {
-        game_1.story.handle(coordinate(e), story_5.Trigger.Up);
+        game_1.story.handle(coordinate(e), story_5.Trigger.Cancel);
     });
     canvas.addEventListener('pointerout', function (e) {
-        game_1.story.handle(coordinate(e), story_5.Trigger.Up);
+        game_1.story.handle(coordinate(e), story_5.Trigger.Cancel);
     });
     canvas.addEventListener('pointerup', function (e) {
         game_1.story.handle(coordinate(e), story_5.Trigger.Up);

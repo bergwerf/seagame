@@ -48,6 +48,7 @@ export class Drag_to_Target implements Layer {
           this.prev = v
         }
         break
+      case Trigger.Cancel:
       case Trigger.Up:
         if (this.dragging) {
           this.dragging = false

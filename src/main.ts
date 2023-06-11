@@ -38,11 +38,11 @@ canvas.addEventListener('pointermove', (e) => {
 })
 
 canvas.addEventListener('pointercancel', (e) => {
-  story.handle(coordinate(e), Trigger.Up)
+  story.handle(coordinate(e), Trigger.Cancel)
 })
 
 canvas.addEventListener('pointerout', (e) => {
-  story.handle(coordinate(e), Trigger.Up)
+  story.handle(coordinate(e), Trigger.Cancel)
 })
 
 canvas.addEventListener('pointerup', (e) => {

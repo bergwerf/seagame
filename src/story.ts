@@ -9,7 +9,7 @@ export type View_Map<View_Id extends string | number> =
 export type Event_Map<View_Id extends string | number> =
   { [view in View_Id]: { [event: string]: () => View_Id | void } }
 
-export enum Trigger { Down, Move, Up }
+export enum Trigger { Down, Move, Cancel, Up }
 
 export interface Layer {
   load(): Promise<void>
