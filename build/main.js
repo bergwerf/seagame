@@ -378,11 +378,10 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
                                 var h = _this.video.videoHeight;
                                 _this.cache = canvas.create(w, h);
                                 _this.cache_ctx = _this.cache.getContext('2d');
-                                //resolve()
+                                resolve();
                             }, { once: true });
                             _this.video.src = _this.src;
                             _this.video.load();
-                            resolve();
                         })];
                 });
             });
@@ -906,11 +905,12 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         ]),
         click_bottle: new layer.Composite([
             layers.click_bottle,
-            new layer.Click_Anywhere('open')
+            new layer.Click_Mask('assets/bottle/bottle_mask.png', 'open')
         ]),
         open_bottle: layers.open_bottle,
         map: new layer.Composite([
-            layers.map
+            layers.map,
+            new layer.Click_Mask('assets/bottle/map_mask.png', 'go')
         ])
     };
     var sounds = {

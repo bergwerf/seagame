@@ -231,11 +231,12 @@ const views = {
   ]),
   click_bottle: new layer.Composite([
     layers.click_bottle,
-    new layer.Click_Anywhere('open')
+    new layer.Click_Mask('assets/bottle/bottle_mask.png', 'open')
   ]),
   open_bottle: layers.open_bottle,
   map: new layer.Composite([
-    layers.map
+    layers.map,
+    new layer.Click_Mask('assets/bottle/map_mask.png', 'go')
   ])
 }
 
