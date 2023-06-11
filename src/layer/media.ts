@@ -33,12 +33,15 @@ export class Video implements Layer {
   private cache: HTMLCanvasElement
   private cache_ctx: CanvasRenderingContext2D
   private finish_event: string
+  private size: m.vec2
 
   constructor(public src: string, {
     on_finish = 'finish',
+    resize = m.vec2(0, 0),
     muted = true,
     loop = false } = {}) {
     this.finish_event = on_finish
+    this.size = resize
     this.video = document.createElement("video")
     this.video.muted = muted
     this.video.loop = loop
@@ -50,6 +53,9 @@ export class Video implements Layer {
       this.video.addEventListener('canplaythrough', () => {
         const w = this.video.videoWidth
         const h = this.video.videoHeight
+        if (this.size.x == 0) {
+          this.size = m.vec2(w, h)
+        }
         this.cache = canvas.create(w, h)
         this.cache_ctx = this.cache.getContext('2d')!
         resolve()
@@ -74,9 +80,9 @@ export class Video implements Layer {
     // The frame cache mitigates blank frames between rewinds.
     if (this.cache) {
       this.cache_ctx.drawImage(this.video, 0, 0)
-      ctx.drawImage(this.cache, 0, 0)
+      ctx.drawImage(this.cache, 0, 0, this.size.x, this.size.y)
     } else {
-      ctx.drawImage(this.video, 0, 0)
+      ctx.drawImage(this.video, 0, 0, this.size.x, this.size.y)
     }
     // Return event when video has ended.
     return this.video.ended ? this.finish_event : null

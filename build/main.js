@@ -330,7 +330,7 @@ define("layer/basic", ["require", "exports", "util/canvas", "story"], function (
 });
 // Multimedia Layers
 // =================
-define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], function (require, exports, canvas) {
+define("layer/media", ["require", "exports", "util/math", "util/canvas", "../util/gifler"], function (require, exports, m, canvas) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GIF = exports.Video = exports.Image = void 0;
@@ -360,9 +360,10 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
     exports.Image = Image;
     var Video = /** @class */ (function () {
         function Video(src, _a) {
-            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.muted, muted = _d === void 0 ? true : _d, _e = _b.loop, loop = _e === void 0 ? false : _e;
+            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.resize, resize = _d === void 0 ? m.vec2(0, 0) : _d, _e = _b.muted, muted = _e === void 0 ? true : _e, _f = _b.loop, loop = _f === void 0 ? false : _f;
             this.src = src;
             this.finish_event = on_finish;
+            this.size = resize;
             this.video = document.createElement("video");
             this.video.muted = muted;
             this.video.loop = loop;
@@ -376,6 +377,9 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
                             _this.video.addEventListener('canplaythrough', function () {
                                 var w = _this.video.videoWidth;
                                 var h = _this.video.videoHeight;
+                                if (_this.size.x == 0) {
+                                    _this.size = m.vec2(w, h);
+                                }
                                 _this.cache = canvas.create(w, h);
                                 _this.cache_ctx = _this.cache.getContext('2d');
                                 resolve();
@@ -399,10 +403,10 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
             // The frame cache mitigates blank frames between rewinds.
             if (this.cache) {
                 this.cache_ctx.drawImage(this.video, 0, 0);
-                ctx.drawImage(this.cache, 0, 0);
+                ctx.drawImage(this.cache, 0, 0, this.size.x, this.size.y);
             }
             else {
-                ctx.drawImage(this.video, 0, 0);
+                ctx.drawImage(this.video, 0, 0, this.size.x, this.size.y);
             }
             // Return event when video has ended.
             return this.video.ended ? this.finish_event : null;
@@ -704,7 +708,7 @@ define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/
 });
 // Game Logic
 // ==========
-define("game", ["require", "exports", "layer/all", "story"], function (require, exports, layer, story_4) {
+define("game", ["require", "exports", "util/math", "layer/all", "story"], function (require, exports, m, layer, story_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.start = exports.story = void 0;
@@ -753,9 +757,9 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
         // Side-scroll landscape
         landscape_bg: new layer.Switch([
-            new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
-            new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
-            new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true })
+            new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
+            new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
+            new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true, resize: m.vec2(5760, 1080) })
         ]),
         landscape_nav: new layer.Composite([
             new layer.Image('assets/landscape/button_left.png'),
