@@ -142,5 +142,13 @@ export const layers = {
   flower_water3: garden_water_layer(3),
   flower_water4: garden_water_layer(4),
   flower_water5: garden_water_layer(5),
-  flower_completed: new layer.Video('assets/flower/completed.mp4', { loop: true })
+  flower_completed: new layer.Video('assets/flower/completed.mp4', { loop: true }),
+
+  // Cleanup minigame
+  cleanup_walk: new layer.Video('assets/cleanup/walk.mp4'),
+  cleanup_intro: new layer.Video('assets/cleanup/intro.mp4', { loop: true }),
+  cleanup_background: new layer.Image('assets/cleanup/background.png'),
+  cleanup_viezesloot: new layer.Erase_Image('assets/cleanup/viezesloot.png', 50),
+  cleanup_drinking: new layer.Video('assets/cleanup/drinking.mp4', { loop: true }),
+  cleanup_completed: new layer.Video('assets/cleanup/completed.mp4'),
 }

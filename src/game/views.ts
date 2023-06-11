@@ -176,5 +176,40 @@ export const views = {
     layers.flower_completed,
     new layer.Click_Anywhere('continue'),
     layers.frame_stars
+  ]),
+
+  // Cleanup minigame
+  cleanup_walk: new layer.Composite([
+    layers.cleanup_walk,
+    layers.character_back,
+    new layer.Click_Anywhere('walk', Trigger.Down),
+    new layer.Click_Anywhere('pause', Trigger.Up),
+    layers.frame_stars
+  ]),
+  cleanup_walk_end: new layer.Composite([
+    layers.cleanup_walk,
+    layers.character_back,
+    layers.nav_next,
+    layers.frame_stars
+  ]),
+  cleanup_intro: new layer.Composite([
+    layers.cleanup_intro,
+    new layer.Click_Anywhere('continue'),
+    layers.frame_stars
+  ]),
+  cleanup_game: new layer.Composite([
+    layers.cleanup_background,
+    layers.cleanup_viezesloot,
+    layers.frame_stars
+  ]),
+  cleanup_drinking: new layer.Composite([
+    layers.cleanup_drinking,
+    layers.nav_next,
+    layers.frame_stars
+  ]),
+  cleanup_completed: new layer.Composite([
+    layers.cleanup_completed,
+    layers.nav_next,
+    layers.frame_stars
   ])
 }

@@ -694,10 +694,87 @@ define("layer/maze", ["require", "exports", "story"], function (require, exports
     }());
     exports.Complete_Maze = Complete_Maze;
 });
-define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/scroll", "layer/dnd", "layer/maze"], function (require, exports, basic_1, media_1, scroll_1, dnd_1, maze_1) {
+// Image Erase Layer
+// =================
+define("layer/erase", ["require", "exports", "util/math", "util/canvas", "story"], function (require, exports, m, canvas, story_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Complete_Maze = exports.Drag_to_Target = exports.Sidescroll = exports.Video = exports.GIF = exports.Image = exports.Click_Mask = exports.Click_Anywhere = exports.Composite = exports.Switch = void 0;
+    exports.Erase_Image = void 0;
+    var Erase_Image = /** @class */ (function () {
+        function Erase_Image(src, radius) {
+            this.src = src;
+            this.radius = radius;
+            this.image = new Image();
+            this.prev = m.v00;
+            this.erasing = false;
+            this.alpha_threshold = 64;
+            this.count_threshold = 100;
+        }
+        Erase_Image.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                var _this = this;
+                return __generator(this, function (_a) {
+                    return [2 /*return*/, new Promise(function (resolve, _) {
+                            _this.image.addEventListener('load', function () {
+                                _this.canvas = canvas.create(_this.image.width, _this.image.height);
+                                _this.ctx = _this.canvas.getContext('2d');
+                                _this.ctx.drawImage(_this.image, 0, 0);
+                                resolve();
+                            }, { once: true });
+                            _this.image.src = _this.src;
+                        })];
+                });
+            });
+        };
+        Erase_Image.prototype.draw = function (ctx) {
+            ctx.drawImage(this.canvas, 0, 0);
+            return null;
+        };
+        Erase_Image.prototype.handle = function (v, t) {
+            switch (t) {
+                case story_4.Trigger.Down:
+                    this.erasing = true;
+                    this.prev = v;
+                    break;
+                case story_4.Trigger.Move:
+                    if (this.erasing) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.prev.x, this.prev.y);
+                        this.ctx.lineTo(v.x, v.y);
+                        this.ctx.lineCap = 'round';
+                        this.ctx.lineWidth = this.radius * 2;
+                        this.ctx.globalCompositeOperation = 'destination-out';
+                        this.ctx.stroke();
+                        this.prev = v;
+                    }
+                    break;
+                case story_4.Trigger.Cancel:
+                case story_4.Trigger.Up:
+                    if (this.erasing) {
+                        this.erasing = false;
+                        var data = this.ctx.getImageData(0, 0, this.image.width, this.image.height).data;
+                        var visible_pixels = 0;
+                        for (var i = 3; i < data.length; i += 4) {
+                            if (data[i] > this.alpha_threshold) {
+                                visible_pixels++;
+                            }
+                        }
+                        if (visible_pixels < this.count_threshold) {
+                            return 'erased';
+                        }
+                    }
+                    break;
+            }
+            return null;
+        };
+        return Erase_Image;
+    }());
+    exports.Erase_Image = Erase_Image;
+});
+define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/scroll", "layer/dnd", "layer/maze", "layer/erase"], function (require, exports, basic_1, media_1, scroll_1, dnd_1, maze_1, erase_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Erase_Image = exports.Complete_Maze = exports.Drag_to_Target = exports.Sidescroll = exports.Video = exports.GIF = exports.Image = exports.Click_Mask = exports.Click_Anywhere = exports.Composite = exports.Switch = void 0;
     Object.defineProperty(exports, "Switch", { enumerable: true, get: function () { return basic_1.Switch; } });
     Object.defineProperty(exports, "Composite", { enumerable: true, get: function () { return basic_1.Composite; } });
     Object.defineProperty(exports, "Click_Anywhere", { enumerable: true, get: function () { return basic_1.Click_Anywhere; } });
@@ -708,23 +785,24 @@ define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/
     Object.defineProperty(exports, "Sidescroll", { enumerable: true, get: function () { return scroll_1.Sidescroll; } });
     Object.defineProperty(exports, "Drag_to_Target", { enumerable: true, get: function () { return dnd_1.Drag_to_Target; } });
     Object.defineProperty(exports, "Complete_Maze", { enumerable: true, get: function () { return maze_1.Complete_Maze; } });
+    Object.defineProperty(exports, "Erase_Image", { enumerable: true, get: function () { return erase_1.Erase_Image; } });
 });
 // Game Layers
 // ===========
-define("game/layers", ["require", "exports", "util/math", "layer/all", "story"], function (require, exports, m, layer, story_4) {
+define("game/layers", ["require", "exports", "util/math", "layer/all", "story"], function (require, exports, m, layer, story_5) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.layers = void 0;
     function garden_item_layer(name) {
         return new layer.Composite([
             new layer.Image("assets/garden/items/".concat(name, ".png")),
-            new layer.Click_Mask("assets/garden/items/".concat(name, "_mask.png"), 'drag', story_4.Trigger.Down),
+            new layer.Click_Mask("assets/garden/items/".concat(name, "_mask.png"), 'drag', story_5.Trigger.Down),
         ]);
     }
     function garden_water_layer(index) {
         return new layer.Composite([
             new layer.Image("assets/flower/water".concat(index, ".png")),
-            new layer.Click_Mask("assets/flower/water".concat(index, "_mask.png"), 'drag', story_4.Trigger.Down),
+            new layer.Click_Mask("assets/flower/water".concat(index, "_mask.png"), 'drag', story_5.Trigger.Down),
         ]);
     }
     exports.layers = {
@@ -795,7 +873,7 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
         garden_start: new layer.Click_Mask('assets/garden/start_mask.png', 'start'),
         garden_background: new layer.Image('assets/garden/background.png'),
         garden_trashcan: new layer.GIF('assets/garden/trashcan.gif'),
-        garden_trashcan_mask: new layer.Click_Mask('assets/garden/trashcan_mask.png', 'drop', story_4.Trigger.Up),
+        garden_trashcan_mask: new layer.Click_Mask('assets/garden/trashcan_mask.png', 'drop', story_5.Trigger.Up),
         garden_item1: garden_item_layer('bag'),
         garden_item2: garden_item_layer('can'),
         garden_item3: garden_item_layer('carton'),
@@ -811,13 +889,13 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
         windmill_explain: new layer.Image('assets/windmill/explain.png'),
         windmill_explain_mask: new layer.Click_Mask('assets/windmill/explain_mask.png', 'start'),
         windmill_background: new layer.Image('assets/windmill/background.png'),
-        windmill_maze: new layer.Click_Mask('assets/windmill/maze.png', 'hit', story_4.Trigger.Down),
-        windmill_maze_green1: new layer.Click_Mask('assets/windmill/maze_green1.png', 'hit', story_4.Trigger.Down),
-        windmill_maze_green2: new layer.Click_Mask('assets/windmill/maze_green2.png', 'hit', story_4.Trigger.Down),
-        windmill_maze_orange1: new layer.Click_Mask('assets/windmill/maze_orange1.png', 'hit', story_4.Trigger.Down),
-        windmill_maze_orange2: new layer.Click_Mask('assets/windmill/maze_orange2.png', 'hit', story_4.Trigger.Down),
-        windmill_maze_red1: new layer.Click_Mask('assets/windmill/maze_red1.png', 'hit', story_4.Trigger.Down),
-        windmill_maze_red2: new layer.Click_Mask('assets/windmill/maze_red2.png', 'hit', story_4.Trigger.Down),
+        windmill_maze: new layer.Click_Mask('assets/windmill/maze.png', 'hit', story_5.Trigger.Down),
+        windmill_maze_green1: new layer.Click_Mask('assets/windmill/maze_green1.png', 'hit', story_5.Trigger.Down),
+        windmill_maze_green2: new layer.Click_Mask('assets/windmill/maze_green2.png', 'hit', story_5.Trigger.Down),
+        windmill_maze_orange1: new layer.Click_Mask('assets/windmill/maze_orange1.png', 'hit', story_5.Trigger.Down),
+        windmill_maze_orange2: new layer.Click_Mask('assets/windmill/maze_orange2.png', 'hit', story_5.Trigger.Down),
+        windmill_maze_red1: new layer.Click_Mask('assets/windmill/maze_red1.png', 'hit', story_5.Trigger.Down),
+        windmill_maze_red2: new layer.Click_Mask('assets/windmill/maze_red2.png', 'hit', story_5.Trigger.Down),
         windmill_working: new layer.Switch([new layer.GIF('assets/windmill/working.gif')]),
         windmill_next: new layer.Switch([
             new layer.Composite([
@@ -838,18 +916,25 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
         flower_background: new layer.Video('assets/flower/background.mp4'),
         flower_explain: new layer.Image('assets/flower/explain.png'),
         flower_explain_mask: new layer.Click_Mask('assets/flower/explain_mask.png', 'start'),
-        flower_target_mask: new layer.Click_Mask('assets/flower/target_mask.png', 'drop', story_4.Trigger.Up),
+        flower_target_mask: new layer.Click_Mask('assets/flower/target_mask.png', 'drop', story_5.Trigger.Up),
         flower_water1: garden_water_layer(1),
         flower_water2: garden_water_layer(2),
         flower_water3: garden_water_layer(3),
         flower_water4: garden_water_layer(4),
         flower_water5: garden_water_layer(5),
-        flower_completed: new layer.Video('assets/flower/completed.mp4', { loop: true })
+        flower_completed: new layer.Video('assets/flower/completed.mp4', { loop: true }),
+        // Cleanup minigame
+        cleanup_walk: new layer.Video('assets/cleanup/walk.mp4'),
+        cleanup_intro: new layer.Video('assets/cleanup/intro.mp4', { loop: true }),
+        cleanup_background: new layer.Image('assets/cleanup/background.png'),
+        cleanup_viezesloot: new layer.Erase_Image('assets/cleanup/viezesloot.png', 50),
+        cleanup_drinking: new layer.Video('assets/cleanup/drinking.mp4', { loop: true }),
+        cleanup_completed: new layer.Video('assets/cleanup/completed.mp4'),
     };
 });
 // Game Views
 // ==========
-define("game/views", ["require", "exports", "layer/all", "game/layers"], function (require, exports, layer, layers_1) {
+define("game/views", ["require", "exports", "layer/all", "story", "game/layers"], function (require, exports, layer, story_6, layers_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.views = void 0;
@@ -1001,12 +1086,46 @@ define("game/views", ["require", "exports", "layer/all", "game/layers"], functio
             layers_1.layers.flower_completed,
             new layer.Click_Anywhere('continue'),
             layers_1.layers.frame_stars
+        ]),
+        // Cleanup minigame
+        cleanup_walk: new layer.Composite([
+            layers_1.layers.cleanup_walk,
+            layers_1.layers.character_back,
+            new layer.Click_Anywhere('walk', story_6.Trigger.Down),
+            new layer.Click_Anywhere('pause', story_6.Trigger.Up),
+            layers_1.layers.frame_stars
+        ]),
+        cleanup_walk_end: new layer.Composite([
+            layers_1.layers.cleanup_walk,
+            layers_1.layers.character_back,
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
+        ]),
+        cleanup_intro: new layer.Composite([
+            layers_1.layers.cleanup_intro,
+            new layer.Click_Anywhere('continue'),
+            layers_1.layers.frame_stars
+        ]),
+        cleanup_game: new layer.Composite([
+            layers_1.layers.cleanup_background,
+            layers_1.layers.cleanup_viezesloot,
+            layers_1.layers.frame_stars
+        ]),
+        cleanup_drinking: new layer.Composite([
+            layers_1.layers.cleanup_drinking,
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
+        ]),
+        cleanup_completed: new layer.Composite([
+            layers_1.layers.cleanup_completed,
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
         ])
     };
 });
 // Game Logic
 // ==========
-define("game/logic", ["require", "exports", "story", "game/layers", "game/views"], function (require, exports, story_5, layers_2, views_1) {
+define("game/logic", ["require", "exports", "story", "game/layers", "game/views"], function (require, exports, story_7, layers_2, views_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.start = exports.story = void 0;
@@ -1021,6 +1140,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
     var sounds = {
         sea: new Audio('assets/sound/sea.mp3'),
         trashcan: new Audio('assets/sound/trashcan.mp3'),
+        completed: new Audio('assets/sound/completed.mp3'),
         connect: new Audio('assets/sound/connect.mp3'),
         error: new Audio('assets/sound/error.mp3'),
         water: new Audio('assets/sound/water.mp3')
@@ -1067,9 +1187,11 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             }
         }
     }
+    var trashcan_timeout = undefined;
     function play_garden_trashcan_once() {
         layers_2.layers.garden_trashcan.start();
-        window.setTimeout(function () {
+        window.clearTimeout(trashcan_timeout);
+        trashcan_timeout = window.setTimeout(function () {
             layers_2.layers.garden_trashcan.stop();
         }, 1220);
     }
@@ -1213,6 +1335,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 play_sound('trashcan');
                 state.cleanup++;
                 if (state.cleanup == 8) {
+                    play_sound('completed');
                     state.garden_completed = true;
                     layers_2.layers.garden_completed.start();
                     return 'garden_completed';
@@ -1250,6 +1373,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 }
             },
             next: function () {
+                play_sound('completed');
                 layers_2.layers.windmill_completed.start();
                 return 'windmill_completed';
             }
@@ -1323,13 +1447,56 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         flower_done: {
             next: function () {
+                play_sound('completed');
                 layers_2.layers.flower_completed.start();
                 return 'flower_completed';
             }
         },
-        flower_completed: {}
+        flower_completed: {
+            continue: function () {
+                layers_2.layers.flower_completed.stop();
+                return 'cleanup_walk';
+            }
+        },
+        // Cleanup minigame
+        cleanup_walk: {
+            walk: function () {
+                layers_2.layers.cleanup_walk.continue();
+            },
+            pause: function () {
+                layers_2.layers.cleanup_walk.stop();
+            },
+            finish: function () { return 'cleanup_walk_end'; }
+        },
+        cleanup_walk_end: {
+            next: function () {
+                layers_2.layers.cleanup_intro.start();
+                return 'cleanup_intro';
+            }
+        },
+        cleanup_intro: {
+            continue: function () {
+                layers_2.layers.cleanup_intro.stop();
+                return 'cleanup_game';
+            }
+        },
+        cleanup_game: {
+            erased: function () {
+                play_sound('completed');
+                layers_2.layers.cleanup_drinking.start();
+                return 'cleanup_drinking';
+            }
+        },
+        cleanup_drinking: {
+            next: function () {
+                layers_2.layers.cleanup_drinking.stop();
+                layers_2.layers.cleanup_completed.start();
+                return 'cleanup_completed';
+            }
+        },
+        cleanup_completed: {}
     };
-    exports.story = new story_5.Story(views_1.views, events, 'loading');
+    exports.story = new story_7.Story(views_1.views, events, 'loading');
     function start() {
         return __awaiter(this, void 0, void 0, function () {
             var promises, l;
@@ -1361,7 +1528,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
 });
 // Main Program
 // ============
-define("main", ["require", "exports", "util/math", "story", "game/logic"], function (require, exports, m, story_6, logic_1) {
+define("main", ["require", "exports", "util/math", "story", "game/logic"], function (require, exports, m, story_8, logic_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     // Auto-playing video with sound is allowed after user interaction:
@@ -1382,20 +1549,20 @@ define("main", ["require", "exports", "util/math", "story", "game/logic"], funct
     }
     canvas.addEventListener('pointerdown', function (e) {
         e.preventDefault();
-        logic_1.story.handle(coordinate(e), story_6.Trigger.Down);
+        logic_1.story.handle(coordinate(e), story_8.Trigger.Down);
     }, { passive: false });
     canvas.addEventListener('pointermove', function (e) {
         e.preventDefault();
-        logic_1.story.handle(coordinate(e), story_6.Trigger.Move);
+        logic_1.story.handle(coordinate(e), story_8.Trigger.Move);
     }, { passive: false });
     canvas.addEventListener('pointercancel', function (e) {
-        logic_1.story.handle(coordinate(e), story_6.Trigger.Cancel);
+        logic_1.story.handle(coordinate(e), story_8.Trigger.Cancel);
     }, { passive: false });
     canvas.addEventListener('pointerout', function (e) {
-        logic_1.story.handle(coordinate(e), story_6.Trigger.Cancel);
+        logic_1.story.handle(coordinate(e), story_8.Trigger.Cancel);
     }, { passive: false });
     canvas.addEventListener('pointerup', function (e) {
-        logic_1.story.handle(coordinate(e), story_6.Trigger.Up);
+        logic_1.story.handle(coordinate(e), story_8.Trigger.Up);
     }, { passive: false });
     // Get rid of gestures
     // -------------------

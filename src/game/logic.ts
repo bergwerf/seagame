@@ -17,6 +17,7 @@ const state = {
 const sounds = {
   sea: new Audio('assets/sound/sea.mp3'),
   trashcan: new Audio('assets/sound/trashcan.mp3'),
+  completed: new Audio('assets/sound/completed.mp3'),
   connect: new Audio('assets/sound/connect.mp3'),
   error: new Audio('assets/sound/error.mp3'),
   water: new Audio('assets/sound/water.mp3')
@@ -60,9 +61,12 @@ function set_landscape(start: boolean) {
   }
 }
 
+let trashcan_timeout: number | undefined = undefined
+
 function play_garden_trashcan_once() {
   layers.garden_trashcan.start()
-  window.setTimeout(() => {
+  window.clearTimeout(trashcan_timeout)
+  trashcan_timeout = window.setTimeout(() => {
     layers.garden_trashcan.stop()
   }, 1220)
 }
@@ -208,6 +212,7 @@ const events: Event_Map<keyof typeof views> = {
       play_sound('trashcan')
       state.cleanup++
       if (state.cleanup == 8) {
+        play_sound('completed')
         state.garden_completed = true
         layers.garden_completed.start()
         return 'garden_completed'
@@ -246,6 +251,7 @@ const events: Event_Map<keyof typeof views> = {
       }
     },
     next: () => {
+      play_sound('completed')
       layers.windmill_completed.start()
       return 'windmill_completed'
     }
@@ -320,11 +326,56 @@ const events: Event_Map<keyof typeof views> = {
   },
   flower_done: {
     next: () => {
+      play_sound('completed')
       layers.flower_completed.start()
       return 'flower_completed'
     }
   },
-  flower_completed: {}
+  flower_completed: {
+    continue: () => {
+      layers.flower_completed.stop()
+      return 'cleanup_walk'
+    }
+  },
+
+  // Cleanup minigame
+  cleanup_walk: {
+    walk: () => {
+      layers.cleanup_walk.continue()
+    },
+    pause: () => {
+      layers.cleanup_walk.stop()
+    },
+    finish: () => 'cleanup_walk_end'
+  },
+  cleanup_walk_end: {
+    next: () => {
+      layers.cleanup_intro.start()
+      return 'cleanup_intro'
+    }
+  },
+  cleanup_intro: {
+    continue: () => {
+      layers.cleanup_intro.stop()
+      return 'cleanup_game'
+    }
+  },
+  cleanup_game: {
+    erased: () => {
+      play_sound('completed')
+      layers.cleanup_drinking.start()
+      return 'cleanup_drinking'
+    }
+  },
+  cleanup_drinking: {
+    next: () => {
+      layers.cleanup_drinking.stop()
+      layers.cleanup_completed.start()
+      return 'cleanup_completed'
+    }
+  },
+  cleanup_completed: {
+  }
 }
 
 export const story = new Story<keyof typeof views>(
