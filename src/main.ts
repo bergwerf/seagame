@@ -30,24 +30,35 @@ function coordinate(e: PointerEvent) {
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault()
   story.handle(coordinate(e), Trigger.Down)
-})
+}, { passive: false })
 
 canvas.addEventListener('pointermove', (e) => {
   e.preventDefault()
   story.handle(coordinate(e), Trigger.Move)
-})
+}, { passive: false })
 
 canvas.addEventListener('pointercancel', (e) => {
   story.handle(coordinate(e), Trigger.Cancel)
-})
+}, { passive: false })
 
 canvas.addEventListener('pointerout', (e) => {
   story.handle(coordinate(e), Trigger.Cancel)
-})
+}, { passive: false })
 
 canvas.addEventListener('pointerup', (e) => {
   story.handle(coordinate(e), Trigger.Up)
-})
+}, { passive: false })
+
+// Get rid of gestures
+// -------------------
+
+canvas.addEventListener('touchdown', (e) => {
+  e.preventDefault()
+}, { passive: false })
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault()
+}, { passive: false })
 
 // Setup continuous render cycle
 // -----------------------------

@@ -1091,20 +1091,28 @@ define("main", ["require", "exports", "util/math", "story", "game"], function (r
     canvas.addEventListener('pointerdown', function (e) {
         e.preventDefault();
         game_1.story.handle(coordinate(e), story_5.Trigger.Down);
-    });
+    }, { passive: false });
     canvas.addEventListener('pointermove', function (e) {
         e.preventDefault();
         game_1.story.handle(coordinate(e), story_5.Trigger.Move);
-    });
+    }, { passive: false });
     canvas.addEventListener('pointercancel', function (e) {
         game_1.story.handle(coordinate(e), story_5.Trigger.Cancel);
-    });
+    }, { passive: false });
     canvas.addEventListener('pointerout', function (e) {
         game_1.story.handle(coordinate(e), story_5.Trigger.Cancel);
-    });
+    }, { passive: false });
     canvas.addEventListener('pointerup', function (e) {
         game_1.story.handle(coordinate(e), story_5.Trigger.Up);
-    });
+    }, { passive: false });
+    // Get rid of gestures
+    // -------------------
+    canvas.addEventListener('touchdown', function (e) {
+        e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+    }, { passive: false });
     // Setup continuous render cycle
     // -----------------------------
     function draw() {
