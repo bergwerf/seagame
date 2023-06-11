@@ -151,4 +151,8 @@ export const layers = {
   cleanup_viezesloot: new layer.Erase_Image('assets/cleanup/viezesloot.png', 50),
   cleanup_drinking: new layer.Video('assets/cleanup/drinking.mp4', { loop: true }),
   cleanup_completed: new layer.Video('assets/cleanup/completed.mp4'),
+
+  // Game finish
+  finish_happy: new layer.Video('assets/finish/happy.mp4', { loop: true }),
+  finish_cake: new layer.Video('assets/finish/cake.mp4')
 }

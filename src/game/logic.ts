@@ -16,8 +16,12 @@ const state = {
 }
 
 const sounds = {
+  // Music
   sea: new Audio('assets/sound/sea.mp3'),
   guitar: new Audio('assets/sound/guitar.mp3'),
+  happy: new Audio('assets/sound/happy.mp3'),
+
+  // Effects
   click: new Audio('assets/sound/click.mp3'),
   trashcan: new Audio('assets/sound/trashcan.mp3'),
   completed: new Audio('assets/sound/completed.mp3'),
@@ -406,8 +410,23 @@ const events: Event_Map<keyof typeof views> = {
   cleanup_completed: {
     next: () => {
       update_stars()
+      sounds.guitar.pause()
+      sounds.happy.loop = true
+      sounds.happy.play()
+      layers.finish_happy.start()
+      return 'finish_happy'
     }
-  }
+  },
+
+  // Game finish
+  finish_happy: {
+    next: () => {
+      layers.finish_happy.stop()
+      layers.finish_cake.start()
+      return 'finish_cake'
+    }
+  },
+  finish_cake: {}
 }
 
 export const story = new Story<keyof typeof views>(

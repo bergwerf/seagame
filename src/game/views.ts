@@ -211,5 +211,13 @@ export const views = {
     layers.cleanup_completed,
     layers.nav_next,
     layers.frame_stars
-  ])
+  ]),
+
+  // Game finish
+  finish_happy: new layer.Composite([
+    layers.finish_happy,
+    layers.nav_next,
+    layers.frame_stars
+  ]),
+  finish_cake: layers.finish_cake
 }

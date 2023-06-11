@@ -930,6 +930,9 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
         cleanup_viezesloot: new layer.Erase_Image('assets/cleanup/viezesloot.png', 50),
         cleanup_drinking: new layer.Video('assets/cleanup/drinking.mp4', { loop: true }),
         cleanup_completed: new layer.Video('assets/cleanup/completed.mp4'),
+        // Game finish
+        finish_happy: new layer.Video('assets/finish/happy.mp4', { loop: true }),
+        finish_cake: new layer.Video('assets/finish/cake.mp4')
     };
 });
 // Game Views
@@ -1120,7 +1123,14 @@ define("game/views", ["require", "exports", "layer/all", "story", "game/layers"]
             layers_1.layers.cleanup_completed,
             layers_1.layers.nav_next,
             layers_1.layers.frame_stars
-        ])
+        ]),
+        // Game finish
+        finish_happy: new layer.Composite([
+            layers_1.layers.finish_happy,
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
+        ]),
+        finish_cake: layers_1.layers.finish_cake
     };
 });
 // Game Logic
@@ -1139,8 +1149,11 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         cleanup_completed: false
     };
     var sounds = {
+        // Music
         sea: new Audio('assets/sound/sea.mp3'),
         guitar: new Audio('assets/sound/guitar.mp3'),
+        happy: new Audio('assets/sound/happy.mp3'),
+        // Effects
         click: new Audio('assets/sound/click.mp3'),
         trashcan: new Audio('assets/sound/trashcan.mp3'),
         completed: new Audio('assets/sound/completed.mp3'),
@@ -1528,8 +1541,22 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         cleanup_completed: {
             next: function () {
                 update_stars();
+                sounds.guitar.pause();
+                sounds.happy.loop = true;
+                sounds.happy.play();
+                layers_2.layers.finish_happy.start();
+                return 'finish_happy';
             }
-        }
+        },
+        // Game finish
+        finish_happy: {
+            next: function () {
+                layers_2.layers.finish_happy.stop();
+                layers_2.layers.finish_cake.start();
+                return 'finish_cake';
+            }
+        },
+        finish_cake: {}
     };
     exports.story = new story_7.Story(views_1.views, events, 'loading');
     function start() {
