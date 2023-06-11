@@ -49,8 +49,8 @@ canvas.addEventListener('pointerup', (e) => {
   story.handle(coordinate(e), Trigger.Up)
 }, { passive: false })
 
-// Get rid of gestures
-// -------------------
+// Get rid of gestures and other browser features
+// ----------------------------------------------
 
 canvas.addEventListener('touchdown', (e) => {
   e.preventDefault()
@@ -59,6 +59,10 @@ canvas.addEventListener('touchdown', (e) => {
 canvas.addEventListener('touchmove', (e) => {
   e.preventDefault()
 }, { passive: false })
+
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault()
+});
 
 // Setup continuous render cycle
 // -----------------------------

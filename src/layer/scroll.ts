@@ -38,7 +38,7 @@ export class Sidescroll implements Layer {
       const dx = nav_result == 'left' ? 1 : nav_result == 'right' ? -1 : 0
       this.x += this.step * dx
       this.x = Math.min(0, Math.max(-this.bg_width + this.view_width, this.x))
-      return null
+      return nav_result
     } else {
       return this.bg.handle(v.plus(m.vec2(-this.x, 0)), t)
     }

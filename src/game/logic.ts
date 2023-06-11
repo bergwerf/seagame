@@ -11,11 +11,14 @@ const state = {
   watered: 0,
   windmill_completed: false,
   garden_completed: false,
-  flower_completed: false
+  flower_completed: false,
+  cleanup_completed: false
 }
 
 const sounds = {
   sea: new Audio('assets/sound/sea.mp3'),
+  guitar: new Audio('assets/sound/guitar.mp3'),
+  click: new Audio('assets/sound/click.mp3'),
   trashcan: new Audio('assets/sound/trashcan.mp3'),
   completed: new Audio('assets/sound/completed.mp3'),
   connect: new Audio('assets/sound/connect.mp3'),
@@ -41,6 +44,7 @@ function update_stars() {
   if (state.windmill_completed) { s.index++ }
   if (state.garden_completed) { s.index++ }
   if (state.flower_completed) { s.index++ }
+  if (state.cleanup_completed) { s.index++ }
 }
 
 function set_landscape(start: boolean) {
@@ -91,10 +95,12 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_crab_nav: {
     rewind: () => {
+      play_sound('click')
       layers.intro_crab.start()
       return 'intro_crab'
     },
     next: () => {
+      play_sound('click')
       layers.intro_sea.start()
       return 'intro_sea'
     }
@@ -104,10 +110,12 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_sea_nav: {
     rewind: () => {
+      play_sound('click')
       layers.intro_sea.start()
       return 'intro_sea'
     },
     next: () => {
+      play_sound('click')
       layers.intro_hand.start()
       return 'intro_hand'
     }
@@ -117,10 +125,14 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_hand_nav: {
     rewind: () => {
+      play_sound('click')
       layers.intro_hand.start()
       return 'intro_hand'
     },
-    next: () => 'intro_shell'
+    next: () => {
+      play_sound('click')
+      return 'intro_shell'
+    }
   },
   intro_shell: {
     pickup: () => {
@@ -136,6 +148,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_welcome: {
     next: () => {
+      play_sound('click')
       layers.intro_welcome.stop()
       layers.intro_load.start()
       return 'intro_load'
@@ -152,17 +165,24 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_character: {
     orange: () => {
+      play_sound('click')
       set_character('orange')
     },
     yellow: () => {
+      play_sound('click')
       set_character('yellow')
     },
     green: () => {
+      play_sound('click')
       set_character('green')
     },
     start: () => {
+      play_sound('click')
       layers.character_background.stop()
       layers.character_characters.stop()
+      sounds.sea.pause()
+      sounds.guitar.loop = true
+      sounds.guitar.play()
       set_landscape(true)
       return 'landscape'
     }
@@ -221,6 +241,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   garden_completed: {
     next: () => {
+      play_sound('click')
       layers.landscape_get_star.start()
       return 'landscape_get_star'
     }
@@ -234,7 +255,10 @@ const events: Event_Map<keyof typeof views> = {
     }
   },
   windmill_explain: {
-    start: () => 'windmill_game'
+    start: () => {
+      play_sound('click')
+      return 'windmill_game'
+    }
   },
   windmill_game: {
     error: () => {
@@ -293,6 +317,7 @@ const events: Event_Map<keyof typeof views> = {
   // Flower minigame
   flower_intro: {
     next: () => {
+      play_sound('click')
       layers.flower_intro.stop()
       return 'flower_explain'
     }
@@ -333,6 +358,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   flower_completed: {
     continue: () => {
+      update_stars()
       layers.flower_completed.stop()
       return 'cleanup_walk'
     }
@@ -350,6 +376,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   cleanup_walk_end: {
     next: () => {
+      play_sound('click')
       layers.cleanup_intro.start()
       return 'cleanup_intro'
     }
@@ -363,18 +390,23 @@ const events: Event_Map<keyof typeof views> = {
   cleanup_game: {
     erased: () => {
       play_sound('completed')
+      state.cleanup_completed = true
       layers.cleanup_drinking.start()
       return 'cleanup_drinking'
     }
   },
   cleanup_drinking: {
     next: () => {
+      play_sound('click')
       layers.cleanup_drinking.stop()
       layers.cleanup_completed.start()
       return 'cleanup_completed'
     }
   },
   cleanup_completed: {
+    next: () => {
+      update_stars()
+    }
   }
 }
 

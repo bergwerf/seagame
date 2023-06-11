@@ -501,7 +501,7 @@ define("layer/scroll", ["require", "exports", "util/math"], function (require, e
                 var dx = nav_result == 'left' ? 1 : nav_result == 'right' ? -1 : 0;
                 this.x += this.step * dx;
                 this.x = Math.min(0, Math.max(-this.bg_width + this.view_width, this.x));
-                return null;
+                return nav_result;
             }
             else {
                 return this.bg.handle(v.plus(m.vec2(-this.x, 0)), t);
@@ -1135,10 +1135,13 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         watered: 0,
         windmill_completed: false,
         garden_completed: false,
-        flower_completed: false
+        flower_completed: false,
+        cleanup_completed: false
     };
     var sounds = {
         sea: new Audio('assets/sound/sea.mp3'),
+        guitar: new Audio('assets/sound/guitar.mp3'),
+        click: new Audio('assets/sound/click.mp3'),
         trashcan: new Audio('assets/sound/trashcan.mp3'),
         completed: new Audio('assets/sound/completed.mp3'),
         connect: new Audio('assets/sound/connect.mp3'),
@@ -1165,6 +1168,9 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             s.index++;
         }
         if (state.flower_completed) {
+            s.index++;
+        }
+        if (state.cleanup_completed) {
             s.index++;
         }
     }
@@ -1215,10 +1221,12 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         intro_crab_nav: {
             rewind: function () {
+                play_sound('click');
                 layers_2.layers.intro_crab.start();
                 return 'intro_crab';
             },
             next: function () {
+                play_sound('click');
                 layers_2.layers.intro_sea.start();
                 return 'intro_sea';
             }
@@ -1228,10 +1236,12 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         intro_sea_nav: {
             rewind: function () {
+                play_sound('click');
                 layers_2.layers.intro_sea.start();
                 return 'intro_sea';
             },
             next: function () {
+                play_sound('click');
                 layers_2.layers.intro_hand.start();
                 return 'intro_hand';
             }
@@ -1241,10 +1251,14 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         intro_hand_nav: {
             rewind: function () {
+                play_sound('click');
                 layers_2.layers.intro_hand.start();
                 return 'intro_hand';
             },
-            next: function () { return 'intro_shell'; }
+            next: function () {
+                play_sound('click');
+                return 'intro_shell';
+            }
         },
         intro_shell: {
             pickup: function () {
@@ -1260,6 +1274,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         intro_welcome: {
             next: function () {
+                play_sound('click');
                 layers_2.layers.intro_welcome.stop();
                 layers_2.layers.intro_load.start();
                 return 'intro_load';
@@ -1276,17 +1291,24 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         intro_character: {
             orange: function () {
+                play_sound('click');
                 set_character('orange');
             },
             yellow: function () {
+                play_sound('click');
                 set_character('yellow');
             },
             green: function () {
+                play_sound('click');
                 set_character('green');
             },
             start: function () {
+                play_sound('click');
                 layers_2.layers.character_background.stop();
                 layers_2.layers.character_characters.stop();
+                sounds.sea.pause();
+                sounds.guitar.loop = true;
+                sounds.guitar.play();
                 set_landscape(true);
                 return 'landscape';
             }
@@ -1344,6 +1366,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         garden_completed: {
             next: function () {
+                play_sound('click');
                 layers_2.layers.landscape_get_star.start();
                 return 'landscape_get_star';
             }
@@ -1356,7 +1379,10 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             }
         },
         windmill_explain: {
-            start: function () { return 'windmill_game'; }
+            start: function () {
+                play_sound('click');
+                return 'windmill_game';
+            }
         },
         windmill_game: {
             error: function () {
@@ -1413,6 +1439,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         // Flower minigame
         flower_intro: {
             next: function () {
+                play_sound('click');
                 layers_2.layers.flower_intro.stop();
                 return 'flower_explain';
             }
@@ -1454,6 +1481,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         flower_completed: {
             continue: function () {
+                update_stars();
                 layers_2.layers.flower_completed.stop();
                 return 'cleanup_walk';
             }
@@ -1470,6 +1498,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         cleanup_walk_end: {
             next: function () {
+                play_sound('click');
                 layers_2.layers.cleanup_intro.start();
                 return 'cleanup_intro';
             }
@@ -1483,18 +1512,24 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         cleanup_game: {
             erased: function () {
                 play_sound('completed');
+                state.cleanup_completed = true;
                 layers_2.layers.cleanup_drinking.start();
                 return 'cleanup_drinking';
             }
         },
         cleanup_drinking: {
             next: function () {
+                play_sound('click');
                 layers_2.layers.cleanup_drinking.stop();
                 layers_2.layers.cleanup_completed.start();
                 return 'cleanup_completed';
             }
         },
-        cleanup_completed: {}
+        cleanup_completed: {
+            next: function () {
+                update_stars();
+            }
+        }
     };
     exports.story = new story_7.Story(views_1.views, events, 'loading');
     function start() {
@@ -1564,14 +1599,17 @@ define("main", ["require", "exports", "util/math", "story", "game/logic"], funct
     canvas.addEventListener('pointerup', function (e) {
         logic_1.story.handle(coordinate(e), story_8.Trigger.Up);
     }, { passive: false });
-    // Get rid of gestures
-    // -------------------
+    // Get rid of gestures and other browser features
+    // ----------------------------------------------
     canvas.addEventListener('touchdown', function (e) {
         e.preventDefault();
     }, { passive: false });
     canvas.addEventListener('touchmove', function (e) {
         e.preventDefault();
     }, { passive: false });
+    document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
     // Setup continuous render cycle
     // -----------------------------
     function draw() {
