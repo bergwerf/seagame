@@ -2,7 +2,7 @@
 // ==========
 
 import * as m from './util/math'
-import * as layer from './layer/basic'
+import * as layer from './layer/all'
 import { Story, Layer, Event_Map } from './story'
 
 const layers = {
@@ -33,12 +33,31 @@ const layers = {
   // Character selection
   character_background: new layer.Video('assets/character/background.mp4', { loop: true }),
   character_characters: new layer.GIF('assets/character/characters.gif'),
-  character_orange: new layer.Switch(new layer.Image('assets/character/orange_selected.png')),
-  character_orange_mask: new layer.Click_Mask('assets/character/orange_mask.png', 'orange'),
-  character_yellow: new layer.Switch(new layer.Image('assets/character/yellow_selected.png')),
-  character_yellow_mask: new layer.Click_Mask('assets/character/yellow_mask.png', 'yellow'),
-  character_green: new layer.Switch(new layer.Image('assets/character/green_selected.png')),
-  character_green_mask: new layer.Click_Mask('assets/character/green_mask.png', 'green'),
+  character_selection: new layer.Switch([
+    new layer.Image('assets/character/orange_selected.png'),
+    new layer.Image('assets/character/yellow_selected.png'),
+    new layer.Image('assets/character/green_selected.png')
+  ]),
+  character_mask: new layer.Composite([
+    new layer.Click_Mask('assets/character/orange_mask.png', 'orange'),
+    new layer.Click_Mask('assets/character/yellow_mask.png', 'yellow'),
+    new layer.Click_Mask('assets/character/green_mask.png', 'green')
+  ]),
+  character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
+
+  // Landscape
+  landscape_bg1: new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
+  landscape_bg2: new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
+  landscape_bg3: new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true }),
+  landscape_lmask: new layer.Click_Mask('assets/landscape/farmer_left_mask.png', 'farmer_left'),
+  landscape_rmask: new layer.Click_Mask('assets/landscape/farmer_right_mask.png', 'farmer_right'),
+  landscape_bg: new layer.Switch([]),
+  landscape_nav: new layer.Composite([
+    new layer.Image('assets/landscape/button_left.png'),
+    new layer.Image('assets/landscape/button_right.png'),
+    new layer.Click_Mask('assets/landscape/button_left_mask.png', 'left'),
+    new layer.Click_Mask('assets/landscape/button_right_mask.png', 'right')
+  ])
 }
 
 const views = {
@@ -74,14 +93,19 @@ const views = {
   intro_load: layers.intro_load,
   intro_character: new layer.Composite([
     layers.character_background,
-    layers.character_orange,
-    layers.character_orange_mask,
-    layers.character_yellow,
-    layers.character_yellow_mask,
-    layers.character_green,
-    layers.character_green_mask,
-    layers.character_characters
-  ])
+    layers.character_selection,
+    layers.character_characters,
+    layers.character_mask,
+    layers.character_start_mask
+  ]),
+  landscape: new layer.Sidescroll(
+    new layer.Composite([
+      layers.landscape_bg,
+      layers.landscape_lmask,
+      layers.landscape_rmask
+    ]),
+    layers.landscape_nav,
+    5760, 1920),
 }
 
 const audio = {
@@ -89,9 +113,8 @@ const audio = {
 }
 
 function set_character(color: string) {
-  layers.character_orange.active = color == 'orange'
-  layers.character_yellow.active = color == 'yellow'
-  layers.character_green.active = color == 'green'
+  const colors = ['orange', 'yellow', 'green']
+  layers.character_selection.index = colors.indexOf(color)
 }
 
 const events: Event_Map<keyof typeof views> = {
@@ -103,9 +126,9 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_dunes: {
     continue: () => {
-      layers.intro_crab.start()
       audio.sea.loop = true
       audio.sea.play()
+      layers.intro_crab.start()
       return 'intro_crab'
     }
   },
@@ -181,6 +204,24 @@ const events: Event_Map<keyof typeof views> = {
     },
     green: () => {
       set_character('green')
+    },
+    start: () => {
+      layers.landscape_bg.layers = [
+        layers.landscape_bg1,
+        layers.landscape_bg2,
+        layers.landscape_bg3
+      ]
+      layers.landscape_bg1.start()
+      layers.landscape_bg.index = 0
+      return 'landscape'
+    }
+  },
+  landscape: {
+    farmer_left: () => {
+      console.log("farmer left")
+    },
+    farmer_right: () => {
+      console.log("farmer right")
     }
   }
 }
@@ -201,5 +242,5 @@ export async function start() {
     }
   }
   await Promise.all(promises)
-  story.handle('loaded')
+  story.trigger('loaded')
 }

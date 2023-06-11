@@ -174,14 +174,20 @@ define("util/canvas", ["require", "exports"], function (require, exports) {
 define("story", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Story = void 0;
+    exports.Story = exports.Event = void 0;
+    var Event;
+    (function (Event) {
+        Event[Event["Down"] = 0] = "Down";
+        Event[Event["Move"] = 1] = "Move";
+        Event[Event["Up"] = 2] = "Up";
+    })(Event || (exports.Event = Event = {}));
     var Story = /** @class */ (function () {
         function Story(views, events, current_view) {
             this.views = views;
             this.events = events;
             this.current_view = current_view;
         }
-        Story.prototype.handle = function (event) {
+        Story.prototype.trigger = function (event) {
             var callback = this.events[this.current_view][event];
             if (callback != undefined) {
                 this.current_view = callback() || this.current_view;
@@ -190,20 +196,14 @@ define("story", ["require", "exports"], function (require, exports) {
         Story.prototype.run = function (f) {
             var event = f(this.views[this.current_view]);
             if (event != null) {
-                this.handle(event);
+                this.trigger(event);
             }
         };
         Story.prototype.draw = function (ctx) {
             this.run(function (layer) { return layer.draw(ctx); });
         };
-        Story.prototype.pointer_down = function (v) {
-            this.run(function (layer) { return layer.pointer_down(v); });
-        };
-        Story.prototype.pointer_move = function (v) {
-            this.run(function (layer) { return layer.pointer_move(v); });
-        };
-        Story.prototype.pointer_up = function (v) {
-            this.run(function (layer) { return layer.pointer_up(v); });
+        Story.prototype.handle = function (v, e) {
+            this.run(function (layer) { return layer.handle(v, e); });
         };
         return Story;
     }());
@@ -211,29 +211,32 @@ define("story", ["require", "exports"], function (require, exports) {
 });
 // Basic Layers
 // ============
-define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], function (require, exports, canvas) {
+define("layer/basic", ["require", "exports", "util/canvas", "story"], function (require, exports, canvas, story_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Click_Mask = exports.Click_Anywhere = exports.GIF = exports.Video = exports.Image = exports.Composite = exports.Switch = void 0;
+    exports.Click_Mask = exports.Click_Anywhere = exports.Composite = exports.Switch = void 0;
     var Switch = /** @class */ (function () {
-        function Switch(layer) {
-            this.layer = layer;
-            this.active = false;
+        function Switch(layers) {
+            this.layers = layers;
+            this.index = -1;
         }
         Switch.prototype.load = function () {
-            return this.layer.load();
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, Promise.all(this.layers.map(function (l) { return l.load(); }))];
+                        case 1:
+                            _a.sent();
+                            return [2 /*return*/];
+                    }
+                });
+            });
         };
         Switch.prototype.draw = function (ctx) {
-            return this.active ? this.layer.draw(ctx) : null;
+            return this.index >= 0 ? this.layers[this.index].draw(ctx) : null;
         };
-        Switch.prototype.pointer_down = function (v) {
-            return this.active ? this.layer.pointer_down(v) : null;
-        };
-        Switch.prototype.pointer_move = function (v) {
-            return this.active ? this.layer.pointer_move(v) : null;
-        };
-        Switch.prototype.pointer_up = function (v) {
-            return this.active ? this.layer.pointer_up(v) : null;
+        Switch.prototype.handle = function (v, e) {
+            return this.index >= 0 ? this.layers[this.index].handle(v, e) : null;
         };
         return Switch;
     }());
@@ -266,18 +269,70 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
         Composite.prototype.draw = function (ctx) {
             return this.run(function (layer) { return layer.draw(ctx); });
         };
-        Composite.prototype.pointer_down = function (v) {
-            return this.run(function (layer) { return layer.pointer_down(v); });
-        };
-        Composite.prototype.pointer_move = function (v) {
-            return this.run(function (layer) { return layer.pointer_move(v); });
-        };
-        Composite.prototype.pointer_up = function (v) {
-            return this.run(function (layer) { return layer.pointer_up(v); });
+        Composite.prototype.handle = function (v, e) {
+            return this.run(function (layer) { return layer.handle(v, e); });
         };
         return Composite;
     }());
     exports.Composite = Composite;
+    var Click_Anywhere = /** @class */ (function () {
+        function Click_Anywhere(event_name, event_trigger) {
+            if (event_trigger === void 0) { event_trigger = story_1.Event.Up; }
+            this.event_name = event_name;
+            this.event_trigger = event_trigger;
+        }
+        Click_Anywhere.prototype.handle = function (v, e) {
+            return e == this.event_trigger ? this.event_name : null;
+        };
+        Click_Anywhere.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
+                return [2 /*return*/];
+            }); });
+        };
+        Click_Anywhere.prototype.draw = function () { return null; };
+        return Click_Anywhere;
+    }());
+    exports.Click_Anywhere = Click_Anywhere;
+    var Click_Mask = /** @class */ (function () {
+        function Click_Mask(src, event_name, event_trigger) {
+            if (event_trigger === void 0) { event_trigger = story_1.Event.Up; }
+            this.src = src;
+            this.event_name = event_name;
+            this.event_trigger = event_trigger;
+        }
+        Click_Mask.prototype.load = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                var _a;
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0:
+                            _a = this;
+                            return [4 /*yield*/, canvas.load_image_data(this.src)];
+                        case 1:
+                            _a.mask = _b.sent();
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        };
+        Click_Mask.prototype.handle = function (v, e) {
+            if (e == this.event_trigger) {
+                var c = canvas.lookup_pixel(this.mask, v.floor());
+                return c[0] > 0 ? this.event_name : null;
+            }
+            return null;
+        };
+        Click_Mask.prototype.draw = function () { return null; };
+        return Click_Mask;
+    }());
+    exports.Click_Mask = Click_Mask;
+});
+// Multimedia Layers
+// =================
+define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], function (require, exports, canvas) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.GIF = exports.Video = exports.Image = void 0;
     var Image = /** @class */ (function () {
         function Image(src) {
             this.src = src;
@@ -298,9 +353,7 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
             ctx.drawImage(this.image, 0, 0);
             return null;
         };
-        Image.prototype.pointer_down = function () { return null; };
-        Image.prototype.pointer_move = function () { return null; };
-        Image.prototype.pointer_up = function () { return null; };
+        Image.prototype.handle = function () { return null; };
         return Image;
     }());
     exports.Image = Image;
@@ -326,6 +379,7 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
                                 resolve();
                             }, { once: true });
                             _this.video.src = _this.src;
+                            _this.video.load();
                         })];
                 });
             });
@@ -357,9 +411,7 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
                 return finish ? this.finish_event : null;
             }
         };
-        Video.prototype.pointer_down = function () { return null; };
-        Video.prototype.pointer_move = function () { return null; };
-        Video.prototype.pointer_up = function () { return null; };
+        Video.prototype.handle = function () { return null; };
         return Video;
     }());
     exports.Video = Video;
@@ -395,64 +447,81 @@ define("layer/basic", ["require", "exports", "util/canvas", "../util/gifler"], f
             ctx.drawImage(this.canvas, 0, 0);
             return null;
         };
-        GIF.prototype.pointer_down = function () { return null; };
-        GIF.prototype.pointer_move = function () { return null; };
-        GIF.prototype.pointer_up = function () { return null; };
+        GIF.prototype.handle = function () { return null; };
         return GIF;
     }());
     exports.GIF = GIF;
-    var Click_Anywhere = /** @class */ (function () {
-        function Click_Anywhere(click_event) {
-            this.click_event = click_event;
+});
+// Image Scrolling Layer
+// =====================
+define("layer/scroll", ["require", "exports", "util/math"], function (require, exports, m) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Sidescroll = void 0;
+    var Sidescroll = /** @class */ (function () {
+        function Sidescroll(bg, nav, bg_width, view_width) {
+            this.bg = bg;
+            this.nav = nav;
+            this.bg_width = bg_width;
+            this.view_width = view_width;
+            this.step = 200;
+            this.x = 0;
         }
-        Click_Anywhere.prototype.pointer_up = function (v) {
-            return this.click_event;
-        };
-        Click_Anywhere.prototype.load = function () {
-            return __awaiter(this, void 0, void 0, function () { return __generator(this, function (_a) {
-                return [2 /*return*/];
-            }); });
-        };
-        Click_Anywhere.prototype.draw = function () { return null; };
-        Click_Anywhere.prototype.pointer_down = function () { return null; };
-        Click_Anywhere.prototype.pointer_move = function () { return null; };
-        return Click_Anywhere;
-    }());
-    exports.Click_Anywhere = Click_Anywhere;
-    var Click_Mask = /** @class */ (function () {
-        function Click_Mask(src, click_event) {
-            this.src = src;
-            this.click_event = click_event;
-        }
-        Click_Mask.prototype.load = function () {
+        Sidescroll.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
-                var _a;
-                return __generator(this, function (_b) {
-                    switch (_b.label) {
-                        case 0:
-                            _a = this;
-                            return [4 /*yield*/, canvas.load_image_data(this.src)];
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, this.bg.load()];
                         case 1:
-                            _a.mask = _b.sent();
+                            _a.sent();
+                            return [4 /*yield*/, this.nav.load()];
+                        case 2:
+                            _a.sent();
                             return [2 /*return*/];
                     }
                 });
             });
         };
-        Click_Mask.prototype.pointer_up = function (v) {
-            var c = canvas.lookup_pixel(this.mask, v.floor());
-            return c[0] > 0 ? this.click_event : null;
+        Sidescroll.prototype.draw = function (ctx) {
+            ctx.save();
+            ctx.translate(this.x, 0);
+            this.bg.draw(ctx);
+            ctx.restore();
+            this.nav.draw(ctx);
+            return null;
         };
-        Click_Mask.prototype.draw = function () { return null; };
-        Click_Mask.prototype.pointer_down = function () { return null; };
-        Click_Mask.prototype.pointer_move = function () { return null; };
-        return Click_Mask;
+        Sidescroll.prototype.handle = function (v, e) {
+            var nav_result = this.nav.handle(v, e);
+            if (nav_result != null) {
+                var dx = nav_result == 'left' ? 1 : nav_result == 'right' ? -1 : 0;
+                this.x += this.step * dx;
+                this.x = Math.min(0, Math.max(-this.bg_width + this.view_width, this.x));
+                return null;
+            }
+            else {
+                return this.bg.handle(v.plus(m.vec2(-this.x, 0)), e);
+            }
+        };
+        return Sidescroll;
     }());
-    exports.Click_Mask = Click_Mask;
+    exports.Sidescroll = Sidescroll;
+});
+define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/scroll"], function (require, exports, basic_1, media_1, scroll_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Sidescroll = exports.Video = exports.GIF = exports.Image = exports.Click_Mask = exports.Click_Anywhere = exports.Composite = exports.Switch = void 0;
+    Object.defineProperty(exports, "Switch", { enumerable: true, get: function () { return basic_1.Switch; } });
+    Object.defineProperty(exports, "Composite", { enumerable: true, get: function () { return basic_1.Composite; } });
+    Object.defineProperty(exports, "Click_Anywhere", { enumerable: true, get: function () { return basic_1.Click_Anywhere; } });
+    Object.defineProperty(exports, "Click_Mask", { enumerable: true, get: function () { return basic_1.Click_Mask; } });
+    Object.defineProperty(exports, "Image", { enumerable: true, get: function () { return media_1.Image; } });
+    Object.defineProperty(exports, "GIF", { enumerable: true, get: function () { return media_1.GIF; } });
+    Object.defineProperty(exports, "Video", { enumerable: true, get: function () { return media_1.Video; } });
+    Object.defineProperty(exports, "Sidescroll", { enumerable: true, get: function () { return scroll_1.Sidescroll; } });
 });
 // Game Logic
 // ==========
-define("game", ["require", "exports", "layer/basic", "story"], function (require, exports, layer, story_1) {
+define("game", ["require", "exports", "layer/all", "story"], function (require, exports, layer, story_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.start = exports.story = void 0;
@@ -482,12 +551,30 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
         // Character selection
         character_background: new layer.Video('assets/character/background.mp4', { loop: true }),
         character_characters: new layer.GIF('assets/character/characters.gif'),
-        character_orange: new layer.Switch(new layer.Image('assets/character/orange_selected.png')),
-        character_orange_mask: new layer.Click_Mask('assets/character/orange_mask.png', 'orange'),
-        character_yellow: new layer.Switch(new layer.Image('assets/character/yellow_selected.png')),
-        character_yellow_mask: new layer.Click_Mask('assets/character/yellow_mask.png', 'yellow'),
-        character_green: new layer.Switch(new layer.Image('assets/character/green_selected.png')),
-        character_green_mask: new layer.Click_Mask('assets/character/green_mask.png', 'green'),
+        character_selection: new layer.Switch([
+            new layer.Image('assets/character/orange_selected.png'),
+            new layer.Image('assets/character/yellow_selected.png'),
+            new layer.Image('assets/character/green_selected.png')
+        ]),
+        character_mask: new layer.Composite([
+            new layer.Click_Mask('assets/character/orange_mask.png', 'orange'),
+            new layer.Click_Mask('assets/character/yellow_mask.png', 'yellow'),
+            new layer.Click_Mask('assets/character/green_mask.png', 'green')
+        ]),
+        character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
+        // Landscape
+        landscape_bg1: new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
+        landscape_bg2: new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
+        landscape_bg3: new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true }),
+        landscape_lmask: new layer.Click_Mask('assets/landscape/farmer_left_mask.png', 'farmer_left'),
+        landscape_rmask: new layer.Click_Mask('assets/landscape/farmer_right_mask.png', 'farmer_right'),
+        landscape_bg: new layer.Switch([]),
+        landscape_nav: new layer.Composite([
+            new layer.Image('assets/landscape/button_left.png'),
+            new layer.Image('assets/landscape/button_right.png'),
+            new layer.Click_Mask('assets/landscape/button_left_mask.png', 'left'),
+            new layer.Click_Mask('assets/landscape/button_right_mask.png', 'right')
+        ])
     };
     var views = {
         loading: layers.intro_hourglass,
@@ -522,22 +609,23 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
         intro_load: layers.intro_load,
         intro_character: new layer.Composite([
             layers.character_background,
-            layers.character_orange,
-            layers.character_orange_mask,
-            layers.character_yellow,
-            layers.character_yellow_mask,
-            layers.character_green,
-            layers.character_green_mask,
-            layers.character_characters
-        ])
+            layers.character_selection,
+            layers.character_characters,
+            layers.character_mask,
+            layers.character_start_mask
+        ]),
+        landscape: new layer.Sidescroll(new layer.Composite([
+            layers.landscape_bg,
+            layers.landscape_lmask,
+            layers.landscape_rmask
+        ]), layers.landscape_nav, 5760, 1920),
     };
     var audio = {
         sea: new Audio('assets/sound/sea.mp3')
     };
     function set_character(color) {
-        layers.character_orange.active = color == 'orange';
-        layers.character_yellow.active = color == 'yellow';
-        layers.character_green.active = color == 'green';
+        var colors = ['orange', 'yellow', 'green'];
+        layers.character_selection.index = colors.indexOf(color);
     }
     var events = {
         loading: {
@@ -548,9 +636,9 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
         },
         intro_dunes: {
             continue: function () {
-                layers.intro_crab.start();
                 audio.sea.loop = true;
                 audio.sea.play();
+                layers.intro_crab.start();
                 return 'intro_crab';
             }
         },
@@ -626,10 +714,28 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
             },
             green: function () {
                 set_character('green');
+            },
+            start: function () {
+                layers.landscape_bg.layers = [
+                    layers.landscape_bg1,
+                    layers.landscape_bg2,
+                    layers.landscape_bg3
+                ];
+                layers.landscape_bg1.start();
+                layers.landscape_bg.index = 0;
+                return 'landscape';
+            }
+        },
+        landscape: {
+            farmer_left: function () {
+                console.log("farmer left");
+            },
+            farmer_right: function () {
+                console.log("farmer right");
             }
         }
     };
-    exports.story = new story_1.Story(views, events, 'loading');
+    exports.story = new story_2.Story(views, events, 'loading');
     function start() {
         return __awaiter(this, void 0, void 0, function () {
             var promises, l;
@@ -651,7 +757,7 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
                         return [4 /*yield*/, Promise.all(promises)];
                     case 2:
                         _a.sent();
-                        exports.story.handle('loaded');
+                        exports.story.trigger('loaded');
                         return [2 /*return*/];
                 }
             });
@@ -661,7 +767,7 @@ define("game", ["require", "exports", "layer/basic", "story"], function (require
 });
 // Main Program
 // ============
-define("main", ["require", "exports", "util/math", "game"], function (require, exports, m, game_1) {
+define("main", ["require", "exports", "util/math", "story", "game"], function (require, exports, m, story_3, game_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     // Auto-playing video with sound is allowed after user interaction:
@@ -681,13 +787,13 @@ define("main", ["require", "exports", "util/math", "game"], function (require, e
         return v.minus(b.position).times(b.size.inv()).times(size);
     }
     canvas.addEventListener('pointerdown', function (e) {
-        game_1.story.pointer_down(coordinate(e));
+        game_1.story.handle(coordinate(e), story_3.Event.Down);
     });
     canvas.addEventListener('pointermove', function (e) {
-        game_1.story.pointer_move(coordinate(e));
+        game_1.story.handle(coordinate(e), story_3.Event.Move);
     });
     canvas.addEventListener('pointerup', function (e) {
-        game_1.story.pointer_up(coordinate(e));
+        game_1.story.handle(coordinate(e), story_3.Event.Up);
     });
     // Setup continuous render cycle
     // -----------------------------
