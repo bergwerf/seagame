@@ -5,10 +5,10 @@ import * as m from '../util/math'
 import * as canvas from '../util/canvas'
 import { Layer, Trigger } from '../story'
 
-export class Switch implements Layer {
+export class Switch<T extends Layer[]> implements Layer {
   public index = -1
 
-  constructor(public layers: Layer[]) { }
+  constructor(public layers: T) { }
 
   async load() {
     await Promise.all(this.layers.map((l) => l.load()))
@@ -23,8 +23,8 @@ export class Switch implements Layer {
   }
 }
 
-export class Composite implements Layer {
-  constructor(private layers: Layer[]) { }
+export class Composite<T extends Layer[]> implements Layer {
+  constructor(private layers: T) { }
 
   async load() {
     await Promise.all(this.layers.map((l) => l.load()))

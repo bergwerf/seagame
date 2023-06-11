@@ -5,13 +5,15 @@ import * as m from '../util/math'
 import { Layer, Trigger } from '../story'
 
 export class Complete_Maze implements Layer {
+  reverse = false
   drawing = false
+  solved = false
   line: m.vec2[] = []
 
   constructor(
     public start: Layer,
-    public maze: Layer,
     public end: Layer,
+    public maze: Layer,
     public line_inner_width: number = 20,
     public line_outer_width: number = 24,
     public line_inner_color: string = 'black',
@@ -32,6 +34,7 @@ export class Complete_Maze implements Layer {
         v = this.line[i]
         ctx.lineTo(v.x, v.y)
       }
+      ctx.lineCap = 'round'
       ctx.strokeStyle = this.line_outer_color
       ctx.lineWidth = this.line_outer_width
       ctx.stroke()
@@ -45,25 +48,39 @@ export class Complete_Maze implements Layer {
   handle(v: m.vec2, t: Trigger) {
     switch (t) {
       case Trigger.Down:
-        if (this.start.handle(v, t) == 'start') {
+        if (!this.solved && this.start.handle(v, Trigger.Down) == 'hit') {
+          this.reverse = false
+          this.drawing = true
+          this.line.push(v)
+        } else if (!this.solved && this.end.handle(v, Trigger.Down) == 'hit') {
+          this.reverse = true
           this.drawing = true
           this.line.push(v)
         }
         break
       case Trigger.Move:
         if (this.drawing) {
-          if (this.maze.handle(v, t) == 'hit') {
+          if (this.maze.handle(v, Trigger.Down) == 'hit') {
+            this.line.push(v)
+          } else {
             this.drawing = false
             this.line = []
-            return 'hit'
-          } else {
-            this.line.push(v)
+            return 'error'
           }
         }
         break
       case Trigger.Up:
-        if (this.drawing && this.end.handle(v, t) == 'end') {
-          return 'solved'
+        if (this.drawing) {
+          this.drawing = false
+          if (this.reverse ?
+            this.start.handle(v, Trigger.Down) == 'hit' :
+            this.end.handle(v, Trigger.Down) == 'hit') {
+            this.solved = true
+            return 'solved'
+          } else {
+            this.line = []
+            return 'error'
+          }
         }
         break
     }

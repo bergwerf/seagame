@@ -585,19 +585,21 @@ define("layer/maze", ["require", "exports", "story"], function (require, exports
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Complete_Maze = void 0;
     var Complete_Maze = /** @class */ (function () {
-        function Complete_Maze(start, maze, end, line_inner_width, line_outer_width, line_inner_color, line_outer_color) {
+        function Complete_Maze(start, end, maze, line_inner_width, line_outer_width, line_inner_color, line_outer_color) {
             if (line_inner_width === void 0) { line_inner_width = 20; }
             if (line_outer_width === void 0) { line_outer_width = 24; }
             if (line_inner_color === void 0) { line_inner_color = 'black'; }
             if (line_outer_color === void 0) { line_outer_color = 'red'; }
             this.start = start;
-            this.maze = maze;
             this.end = end;
+            this.maze = maze;
             this.line_inner_width = line_inner_width;
             this.line_outer_width = line_outer_width;
             this.line_inner_color = line_inner_color;
             this.line_outer_color = line_outer_color;
+            this.reverse = false;
             this.drawing = false;
+            this.solved = false;
             this.line = [];
         }
         Complete_Maze.prototype.load = function () {
@@ -627,6 +629,7 @@ define("layer/maze", ["require", "exports", "story"], function (require, exports
                     v = this.line[i];
                     ctx.lineTo(v.x, v.y);
                 }
+                ctx.lineCap = 'round';
                 ctx.strokeStyle = this.line_outer_color;
                 ctx.lineWidth = this.line_outer_width;
                 ctx.stroke();
@@ -639,26 +642,42 @@ define("layer/maze", ["require", "exports", "story"], function (require, exports
         Complete_Maze.prototype.handle = function (v, t) {
             switch (t) {
                 case story_3.Trigger.Down:
-                    if (this.start.handle(v, t) == 'start') {
+                    if (!this.solved && this.start.handle(v, story_3.Trigger.Down) == 'hit') {
+                        this.reverse = false;
+                        this.drawing = true;
+                        this.line.push(v);
+                    }
+                    else if (!this.solved && this.end.handle(v, story_3.Trigger.Down) == 'hit') {
+                        this.reverse = true;
                         this.drawing = true;
                         this.line.push(v);
                     }
                     break;
                 case story_3.Trigger.Move:
                     if (this.drawing) {
-                        if (this.maze.handle(v, t) == 'hit') {
-                            this.drawing = false;
-                            this.line = [];
-                            return 'hit';
+                        if (this.maze.handle(v, story_3.Trigger.Down) == 'hit') {
+                            this.line.push(v);
                         }
                         else {
-                            this.line.push(v);
+                            this.drawing = false;
+                            this.line = [];
+                            return 'error';
                         }
                     }
                     break;
                 case story_3.Trigger.Up:
-                    if (this.drawing && this.end.handle(v, t) == 'end') {
-                        return 'solved';
+                    if (this.drawing) {
+                        this.drawing = false;
+                        if (this.reverse ?
+                            this.start.handle(v, story_3.Trigger.Down) == 'hit' :
+                            this.end.handle(v, story_3.Trigger.Down) == 'hit') {
+                            this.solved = true;
+                            return 'solved';
+                        }
+                        else {
+                            this.line = [];
+                            return 'error';
+                        }
                     }
                     break;
             }
@@ -733,18 +752,19 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         ]),
         character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
         // Side-scroll landscape
-        landscape_bg1: new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
-        landscape_bg2: new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
-        landscape_bg3: new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true }),
-        landscape_lmask: new layer.Click_Mask('assets/landscape/farmer_left_mask.png', 'farmer_left'),
-        landscape_rmask: new layer.Click_Mask('assets/landscape/farmer_right_mask.png', 'farmer_right'),
-        landscape_bg: new layer.Switch([]),
+        landscape_bg: new layer.Switch([
+            new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true }),
+            new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true }),
+            new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true })
+        ]),
         landscape_nav: new layer.Composite([
             new layer.Image('assets/landscape/button_left.png'),
             new layer.Image('assets/landscape/button_right.png'),
             new layer.Click_Mask('assets/landscape/button_left_mask.png', 'left'),
             new layer.Click_Mask('assets/landscape/button_right_mask.png', 'right')
         ]),
+        landscape_lmask: new layer.Click_Mask('assets/landscape/farmer_left_mask.png', 'farmer_left'),
+        landscape_rmask: new layer.Click_Mask('assets/landscape/farmer_right_mask.png', 'farmer_right'),
         // Garden minigame
         garden_intro: new layer.Video('assets/garden/intro.mp4', { muted: false, loop: true }),
         garden_start: new layer.Click_Mask('assets/garden/start_mask.png', 'start'),
@@ -759,6 +779,20 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         garden_item6: garden_item_layer('lamp'),
         garden_item7: garden_item_layer('paper'),
         garden_item8: garden_item_layer('spoon'),
+        // Windmill minigame
+        windmill_intro: new layer.Video('assets/windmill/intro.mp4', { muted: false, loop: true }),
+        windmill_intro_mask: new layer.Click_Mask('assets/windmill/intro_mask.png', 'start'),
+        windmill_explain: new layer.Image('assets/windmill/explain.png'),
+        windmill_explain_mask: new layer.Click_Mask('assets/windmill/explain_mask.png', 'start'),
+        windmill_background: new layer.Image('assets/windmill/background.png'),
+        windmill_maze: new layer.Click_Mask('assets/windmill/maze.png', 'hit', story_4.Trigger.Down),
+        windmill_maze_green1: new layer.Click_Mask('assets/windmill/maze_green1.png', 'hit', story_4.Trigger.Down),
+        windmill_maze_green2: new layer.Click_Mask('assets/windmill/maze_green2.png', 'hit', story_4.Trigger.Down),
+        windmill_maze_orange1: new layer.Click_Mask('assets/windmill/maze_orange1.png', 'hit', story_4.Trigger.Down),
+        windmill_maze_orange2: new layer.Click_Mask('assets/windmill/maze_orange2.png', 'hit', story_4.Trigger.Down),
+        windmill_maze_red1: new layer.Click_Mask('assets/windmill/maze_red1.png', 'hit', story_4.Trigger.Down),
+        windmill_maze_red2: new layer.Click_Mask('assets/windmill/maze_red2.png', 'hit', story_4.Trigger.Down),
+        windmill_working: new layer.Switch([new layer.GIF('assets/windmill/working.gif')]),
     };
     var views = {
         loading: layers.intro_hourglass,
@@ -818,15 +852,37 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
             new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item6, 'trash'),
             new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
             new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
+        ]),
+        windmill_intro: new layer.Composite([
+            layers.windmill_intro,
+            layers.windmill_intro_mask
+        ]),
+        windmill_explain: new layer.Composite([
+            layers.windmill_explain,
+            layers.windmill_explain_mask
+        ]),
+        windmill_game: new layer.Composite([
+            layers.windmill_background,
+            new layer.Complete_Maze(layers.windmill_maze_green1, layers.windmill_maze_green2, layers.windmill_maze, 20, 25, '#a5c000', 'black'),
+            new layer.Complete_Maze(layers.windmill_maze_orange1, layers.windmill_maze_orange2, layers.windmill_maze, 20, 25, '#c25d00', 'black'),
+            new layer.Complete_Maze(layers.windmill_maze_red1, layers.windmill_maze_red2, layers.windmill_maze, 20, 25, '#bb252e', 'black'),
+            layers.windmill_working
         ])
     };
-    var audio = {
+    var sounds = {
         sea: new Audio('assets/sound/sea.mp3'),
-        trashcan: new Audio('assets/sound/trashcan.mp3')
+        trashcan: new Audio('assets/sound/trashcan.mp3'),
+        connect: new Audio('assets/sound/connect.mp3'),
+        error: new Audio('assets/sound/error.mp3')
     };
     var state = {
-        cleanup: 0
+        cleanup: 0,
+        connect: 0
     };
+    function play_sound(name) {
+        sounds[name].load();
+        sounds[name].play();
+    }
     function play_garden_trashcan_once() {
         layers.garden_trashcan.start();
         window.setTimeout(function () {
@@ -846,8 +902,8 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         },
         intro_dunes: {
             continue: function () {
-                audio.sea.loop = true;
-                audio.sea.play();
+                sounds.sea.loop = true;
+                sounds.sea.play();
                 layers.intro_crab.start();
                 return 'intro_crab';
             }
@@ -929,18 +985,15 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
             start: function () {
                 layers.character_background.stop();
                 layers.character_characters.stop();
-                layers.landscape_bg.layers = [
-                    layers.landscape_bg1,
-                    layers.landscape_bg2,
-                    layers.landscape_bg3
-                ];
-                layers.landscape_bg1.start();
+                layers.landscape_bg.layers[0].start();
                 layers.landscape_bg.index = 0;
                 return 'landscape';
             }
         },
         landscape: {
             farmer_left: function () {
+                layers.windmill_intro.start();
+                return 'windmill_intro';
             },
             farmer_right: function () {
                 layers.garden_intro.start();
@@ -957,8 +1010,30 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         garden_game: {
             trash: function () {
                 play_garden_trashcan_once();
-                audio.trashcan.play();
+                play_sound('trashcan');
                 state.cleanup++;
+            }
+        },
+        windmill_intro: {
+            start: function () {
+                layers.windmill_intro.stop();
+                return 'windmill_explain';
+            }
+        },
+        windmill_explain: {
+            start: function () { return 'windmill_game'; }
+        },
+        windmill_game: {
+            error: function () {
+                play_sound('error');
+            },
+            solved: function () {
+                play_sound('connect');
+                state.connect++;
+                if (state.connect == 3) {
+                    layers.windmill_working.index = 0;
+                    layers.windmill_working.layers[0].start();
+                }
             }
         }
     };
