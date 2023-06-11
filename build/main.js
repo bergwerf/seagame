@@ -1012,9 +1012,11 @@ define("main", ["require", "exports", "util/math", "story", "game"], function (r
         return v.minus(b.position).times(b.size.inv()).times(size);
     }
     canvas.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
         game_1.story.handle(coordinate(e), story_5.Trigger.Down);
     });
     canvas.addEventListener('pointermove', function (e) {
+        e.preventDefault();
         game_1.story.handle(coordinate(e), story_5.Trigger.Move);
     });
     canvas.addEventListener('pointercancel', function (e) {

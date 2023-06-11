@@ -28,10 +28,12 @@ function coordinate(e: PointerEvent) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault()
   story.handle(coordinate(e), Trigger.Down)
 })
 
 canvas.addEventListener('pointermove', (e) => {
+  e.preventDefault()
   story.handle(coordinate(e), Trigger.Move)
 })
 
