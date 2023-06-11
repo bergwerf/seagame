@@ -137,14 +137,14 @@ const views = {
   garden_game: new layer.Composite([
     layers.garden_background,
     layers.garden_trashcan,
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item1, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item2, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item3, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item4, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item5, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item6, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
-    new layer.DragToTarget(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item1, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item2, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item3, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item4, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item5, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item6, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
+    new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
   ])
 }
 

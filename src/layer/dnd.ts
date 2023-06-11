@@ -2,10 +2,9 @@
 // ===================
 
 import * as m from '../util/math'
-import * as canvas from '../util/canvas'
 import { Layer, Trigger } from '../story'
 
-export class DragToTarget implements Layer {
+export class Drag_to_Target implements Layer {
   offset = m.v00
   prev = m.v00
   dragging = false
