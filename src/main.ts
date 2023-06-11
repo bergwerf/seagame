@@ -3,7 +3,7 @@
 
 import * as m from './util/math'
 import { Trigger } from './story'
-import { story, start } from './game'
+import { story, start } from './game/logic'
 
 // Auto-playing video with sound is allowed after user interaction:
 // https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide

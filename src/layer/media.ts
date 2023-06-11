@@ -29,7 +29,7 @@ export class Image implements Layer {
 }
 
 export class Video implements Layer {
-  private video: HTMLVideoElement
+  public video: HTMLVideoElement
   private cache: HTMLCanvasElement
   private cache_ctx: CanvasRenderingContext2D
   private finish_event: string
@@ -74,6 +74,10 @@ export class Video implements Layer {
 
   stop() {
     this.video.pause()
+  }
+
+  continue() {
+    this.video.play()
   }
 
   draw(ctx: CanvasRenderingContext2D) {

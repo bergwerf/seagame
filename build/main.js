@@ -132,43 +132,6 @@ define("util/math", ["require", "exports"], function (require, exports) {
     }
     exports.dom_bounding_box = dom_bounding_box;
 });
-// Utilities
-// =========
-define("util/canvas", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.lookup_pixel = exports.load_image_data = exports.create = void 0;
-    // OffscreenCanvas is not yet supported by default on Firefox ESR.
-    function create(width, height) {
-        if (width === void 0) { width = 0; }
-        if (height === void 0) { height = 0; }
-        var canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
-    }
-    exports.create = create;
-    function load_image_data(src) {
-        return new Promise(function (resolve, _) {
-            var image = new Image();
-            image.addEventListener('load', function () {
-                var canvas = create(image.width, image.height);
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(image, 0, 0);
-                var data = ctx.getImageData(0, 0, image.width, image.height);
-                resolve(data);
-            }, { once: true });
-            image.src = src;
-        });
-    }
-    exports.load_image_data = load_image_data;
-    function lookup_pixel(image, pixel) {
-        var i = 4 * (pixel.y * image.width + pixel.x);
-        var d = image.data;
-        return [d[i], d[i + 1], d[i + 2], d[i + 3]];
-    }
-    exports.lookup_pixel = lookup_pixel;
-});
 // Interactive Story Based on Layers
 // =================================
 define("story", ["require", "exports"], function (require, exports) {
@@ -209,6 +172,43 @@ define("story", ["require", "exports"], function (require, exports) {
         return Story;
     }());
     exports.Story = Story;
+});
+// Utilities
+// =========
+define("util/canvas", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.lookup_pixel = exports.load_image_data = exports.create = void 0;
+    // OffscreenCanvas is not yet supported by default on Firefox ESR.
+    function create(width, height) {
+        if (width === void 0) { width = 0; }
+        if (height === void 0) { height = 0; }
+        var canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+    exports.create = create;
+    function load_image_data(src) {
+        return new Promise(function (resolve, _) {
+            var image = new Image();
+            image.addEventListener('load', function () {
+                var canvas = create(image.width, image.height);
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(image, 0, 0);
+                var data = ctx.getImageData(0, 0, image.width, image.height);
+                resolve(data);
+            }, { once: true });
+            image.src = src;
+        });
+    }
+    exports.load_image_data = load_image_data;
+    function lookup_pixel(image, pixel) {
+        var i = 4 * (pixel.y * image.width + pixel.x);
+        var d = image.data;
+        return [d[i], d[i + 1], d[i + 2], d[i + 3]];
+    }
+    exports.lookup_pixel = lookup_pixel;
 });
 // Basic Layers
 // ============
@@ -398,6 +398,9 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
         };
         Video.prototype.stop = function () {
             this.video.pause();
+        };
+        Video.prototype.continue = function () {
+            this.video.play();
         };
         Video.prototype.draw = function (ctx) {
             // The frame cache mitigates blank frames between rewinds.
@@ -706,19 +709,25 @@ define("layer/all", ["require", "exports", "layer/basic", "layer/media", "layer/
     Object.defineProperty(exports, "Drag_to_Target", { enumerable: true, get: function () { return dnd_1.Drag_to_Target; } });
     Object.defineProperty(exports, "Complete_Maze", { enumerable: true, get: function () { return maze_1.Complete_Maze; } });
 });
-// Game Logic
-// ==========
-define("game", ["require", "exports", "util/math", "layer/all", "story"], function (require, exports, m, layer, story_4) {
+// Game Layers
+// ===========
+define("game/layers", ["require", "exports", "util/math", "layer/all", "story"], function (require, exports, m, layer, story_4) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.start = exports.story = void 0;
+    exports.layers = void 0;
     function garden_item_layer(name) {
         return new layer.Composite([
             new layer.Image("assets/garden/items/".concat(name, ".png")),
             new layer.Click_Mask("assets/garden/items/".concat(name, "_mask.png"), 'drag', story_4.Trigger.Down),
         ]);
     }
-    var layers = {
+    function garden_water_layer(index) {
+        return new layer.Composite([
+            new layer.Image("assets/flower/water".concat(index, ".png")),
+            new layer.Click_Mask("assets/flower/water".concat(index, "_mask.png"), 'drag', story_4.Trigger.Down),
+        ]);
+    }
+    exports.layers = {
         // Navigation
         nav_rewind: new layer.Composite([
             new layer.Image('assets/nav/rewind.png'),
@@ -807,165 +816,221 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
         ]),
         windmill_completed: new layer.Video('assets/windmill/completed.mp4'),
         // Opening the bottle
-        get_bottle: new layer.Video('assets/bottle/get_bottle.mp4'),
-        click_bottle: new layer.Video('assets/bottle/click_bottle.mp4', { loop: true }),
-        open_bottle: new layer.Video('assets/bottle/open_bottle.mp4'),
-        map: new layer.Video('assets/bottle/map.mp4', { loop: true })
+        bottle_get: new layer.Video('assets/bottle/get.mp4'),
+        bottle_click: new layer.Video('assets/bottle/click.mp4', { loop: true }),
+        bottle_click_mask: new layer.Click_Mask('assets/bottle/click_mask.png', 'open'),
+        bottle_open: new layer.Video('assets/bottle/open.mp4'),
+        bottle_map: new layer.Video('assets/bottle/map.mp4', { loop: true }),
+        bottle_map_mask: new layer.Click_Mask('assets/bottle/map_mask.png', 'go'),
+        // Flower minigame
+        flower_intro: new layer.Video('assets/flower/intro.mp4', { loop: true }),
+        flower_background: new layer.Video('assets/flower/background.mp4'),
+        flower_explain: new layer.Image('assets/flower/explain.png'),
+        flower_explain_mask: new layer.Click_Mask('assets/flower/explain_mask.png', 'start'),
+        flower_target_mask: new layer.Click_Mask('assets/flower/target_mask.png', 'drop', story_4.Trigger.Up),
+        flower_water1: garden_water_layer(1),
+        flower_water2: garden_water_layer(2),
+        flower_water3: garden_water_layer(3),
+        flower_water4: garden_water_layer(4),
+        flower_water5: garden_water_layer(5),
+        flower_completed: new layer.Video('assets/flower/completed.mp4', { loop: true })
     };
-    var views = {
-        loading: layers.intro_hourglass,
+});
+// Game Views
+// ==========
+define("game/views", ["require", "exports", "layer/all", "game/layers"], function (require, exports, layer, layers_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.views = void 0;
+    exports.views = {
+        loading: layers_1.layers.intro_hourglass,
         intro_dunes: new layer.Composite([
-            layers.intro_dunes,
+            layers_1.layers.intro_dunes,
             new layer.Click_Anywhere('continue')
         ]),
-        intro_crab: layers.intro_crab,
+        intro_crab: layers_1.layers.intro_crab,
         intro_crab_nav: new layer.Composite([
-            layers.intro_crab,
-            layers.nav_rewind,
-            layers.nav_next
+            layers_1.layers.intro_crab,
+            layers_1.layers.nav_rewind,
+            layers_1.layers.nav_next
         ]),
-        intro_sea: layers.intro_sea,
+        intro_sea: layers_1.layers.intro_sea,
         intro_sea_nav: new layer.Composite([
-            layers.intro_sea,
-            layers.nav_rewind,
-            layers.nav_next
+            layers_1.layers.intro_sea,
+            layers_1.layers.nav_rewind,
+            layers_1.layers.nav_next
         ]),
-        intro_hand: layers.intro_hand,
+        intro_hand: layers_1.layers.intro_hand,
         intro_hand_nav: new layer.Composite([
-            layers.intro_hand,
-            layers.nav_rewind,
-            layers.nav_next
+            layers_1.layers.intro_hand,
+            layers_1.layers.nav_rewind,
+            layers_1.layers.nav_next
         ]),
-        intro_shell: layers.intro_shell,
-        intro_shell_pickup: layers.intro_shell_pickup,
+        intro_shell: layers_1.layers.intro_shell,
+        intro_shell_pickup: layers_1.layers.intro_shell_pickup,
         intro_welcome: new layer.Composite([
-            layers.intro_welcome,
-            layers.nav_next
+            layers_1.layers.intro_welcome,
+            layers_1.layers.nav_next
         ]),
-        intro_load: layers.intro_load,
+        intro_load: layers_1.layers.intro_load,
         intro_character: new layer.Composite([
-            layers.character_background,
-            layers.character_selection,
-            layers.character_characters,
-            layers.character_mask,
-            layers.character_start_mask
+            layers_1.layers.character_background,
+            layers_1.layers.character_selection,
+            layers_1.layers.character_characters,
+            layers_1.layers.character_mask,
+            layers_1.layers.character_start_mask
         ]),
         // Side-scroll landscape
         landscape: new layer.Sidescroll(new layer.Composite([
-            layers.landscape_bg,
-            layers.landscape_lmask,
-            layers.landscape_rmask
-        ]), layers.landscape_nav, 5760, 1920, -1950),
+            layers_1.layers.landscape_bg,
+            layers_1.layers.landscape_lmask,
+            layers_1.layers.landscape_rmask
+        ]), layers_1.layers.landscape_nav, 5760, 1920, -1950),
         landscape_get_star: new layer.Composite([
-            layers.landscape_get_star,
+            layers_1.layers.landscape_get_star,
             new layer.Click_Anywhere('continue')
         ]),
         // Garden minigame
         garden_intro: new layer.Composite([
-            layers.garden_intro,
-            layers.garden_start
+            layers_1.layers.garden_intro,
+            layers_1.layers.garden_start
         ]),
         garden_game: new layer.Composite([
-            layers.garden_background,
-            layers.garden_trashcan,
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item1, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item2, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item3, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item4, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item5, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item6, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
-            new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
+            layers_1.layers.garden_background,
+            layers_1.layers.garden_trashcan,
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item1, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item2, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item3, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item4, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item5, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item6, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item7, 'trash'),
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item8, 'trash')
         ]),
         garden_completed: new layer.Composite([
-            layers.garden_completed,
-            layers.nav_next
+            layers_1.layers.garden_completed,
+            layers_1.layers.nav_next
         ]),
         // Windmill minigame
         windmill_intro: new layer.Composite([
-            layers.windmill_intro,
-            layers.windmill_intro_mask
+            layers_1.layers.windmill_intro,
+            layers_1.layers.windmill_intro_mask
         ]),
         windmill_explain: new layer.Composite([
-            layers.windmill_explain,
-            layers.windmill_explain_mask
+            layers_1.layers.windmill_explain,
+            layers_1.layers.windmill_explain_mask
         ]),
         windmill_game: new layer.Composite([
-            layers.windmill_background,
-            new layer.Complete_Maze(layers.windmill_maze_green1, layers.windmill_maze_green2, layers.windmill_maze, 20, 25, '#a5c000', 'black'),
-            new layer.Complete_Maze(layers.windmill_maze_orange1, layers.windmill_maze_orange2, layers.windmill_maze, 20, 25, '#c25d00', 'black'),
-            new layer.Complete_Maze(layers.windmill_maze_red1, layers.windmill_maze_red2, layers.windmill_maze, 20, 25, '#bb252e', 'black'),
-            layers.windmill_working,
-            layers.windmill_next
+            layers_1.layers.windmill_background,
+            new layer.Complete_Maze(layers_1.layers.windmill_maze_green1, layers_1.layers.windmill_maze_green2, layers_1.layers.windmill_maze, 20, 25, '#a5c000', 'black'),
+            new layer.Complete_Maze(layers_1.layers.windmill_maze_orange1, layers_1.layers.windmill_maze_orange2, layers_1.layers.windmill_maze, 20, 25, '#c25d00', 'black'),
+            new layer.Complete_Maze(layers_1.layers.windmill_maze_red1, layers_1.layers.windmill_maze_red2, layers_1.layers.windmill_maze, 20, 25, '#bb252e', 'black'),
+            layers_1.layers.windmill_working,
+            layers_1.layers.windmill_next
         ]),
         windmill_completed: new layer.Composite([
-            layers.windmill_completed,
+            layers_1.layers.windmill_completed,
             new layer.Click_Anywhere('open')
         ]),
         // Opening the bottle
-        get_bottle: new layer.Composite([
-            layers.get_bottle,
+        bottle_get: new layer.Composite([
+            layers_1.layers.bottle_get,
             new layer.Click_Anywhere('continue')
         ]),
-        click_bottle: new layer.Composite([
-            layers.click_bottle,
-            new layer.Click_Mask('assets/bottle/bottle_mask.png', 'open')
+        bottle_click: new layer.Composite([
+            layers_1.layers.bottle_click,
+            layers_1.layers.bottle_click_mask
         ]),
-        open_bottle: layers.open_bottle,
-        map: new layer.Composite([
-            layers.map,
-            new layer.Click_Mask('assets/bottle/map_mask.png', 'go')
+        bottle_open: layers_1.layers.bottle_open,
+        bottle_map: new layer.Composite([
+            layers_1.layers.bottle_map,
+            layers_1.layers.bottle_map_mask
+        ]),
+        // Flower minigame
+        flower_intro: new layer.Composite([
+            layers_1.layers.flower_intro,
+            layers_1.layers.nav_next
+        ]),
+        flower_explain: new layer.Composite([
+            layers_1.layers.flower_explain,
+            layers_1.layers.flower_explain_mask
+        ]),
+        flower_game: new layer.Composite([
+            layers_1.layers.flower_background,
+            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water1, 'water'),
+            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water2, 'water'),
+            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water3, 'water'),
+            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water4, 'water'),
+            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water5, 'water')
+        ]),
+        flower_done: new layer.Composite([
+            layers_1.layers.flower_background,
+            layers_1.layers.nav_next
+        ]),
+        flower_completed: new layer.Composite([
+            layers_1.layers.flower_completed,
+            new layer.Click_Anywhere('continue')
         ])
+    };
+});
+// Game Logic
+// ==========
+define("game/logic", ["require", "exports", "story", "game/layers", "game/views"], function (require, exports, story_5, layers_2, views_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.start = exports.story = void 0;
+    var state = {
+        cleanup: 0,
+        connect: 0,
+        watered: 0,
+        windmill_completed: false,
+        garden_completed: false,
+        flower_completed: false
     };
     var sounds = {
         sea: new Audio('assets/sound/sea.mp3'),
         trashcan: new Audio('assets/sound/trashcan.mp3'),
         connect: new Audio('assets/sound/connect.mp3'),
-        error: new Audio('assets/sound/error.mp3')
-    };
-    var state = {
-        cleanup: 0,
-        connect: 0,
-        windmill_completed: false,
-        garden_completed: false
+        error: new Audio('assets/sound/error.mp3'),
+        water: new Audio('assets/sound/water.mp3')
     };
     function play_sound(name) {
         sounds[name].load();
         sounds[name].play();
     }
+    function set_character(color) {
+        var colors = ['orange', 'yellow', 'green'];
+        layers_2.layers.character_selection.index = colors.indexOf(color);
+    }
     function set_landscape(start) {
-        layers.landscape_bg.layers[0].stop();
-        layers.landscape_bg.layers[1].stop();
-        layers.landscape_bg.layers[2].stop();
+        layers_2.layers.landscape_bg.layers[0].stop();
+        layers_2.layers.landscape_bg.layers[1].stop();
+        layers_2.layers.landscape_bg.layers[2].stop();
         if (start) {
             if (state.windmill_completed) {
-                layers.landscape_bg.index = 1;
-                layers.landscape_bg.layers[1].start();
+                layers_2.layers.landscape_bg.index = 1;
+                layers_2.layers.landscape_bg.layers[1].start();
             }
             else if (state.garden_completed) {
-                layers.landscape_bg.index = 2;
-                layers.landscape_bg.layers[2].start();
+                layers_2.layers.landscape_bg.index = 2;
+                layers_2.layers.landscape_bg.layers[2].start();
             }
             else {
-                layers.landscape_bg.index = 0;
-                layers.landscape_bg.layers[0].start();
+                layers_2.layers.landscape_bg.index = 0;
+                layers_2.layers.landscape_bg.layers[0].start();
             }
         }
     }
     function play_garden_trashcan_once() {
-        layers.garden_trashcan.start();
+        layers_2.layers.garden_trashcan.start();
         window.setTimeout(function () {
-            layers.garden_trashcan.stop();
+            layers_2.layers.garden_trashcan.stop();
         }, 1220);
-    }
-    function set_character(color) {
-        var colors = ['orange', 'yellow', 'green'];
-        layers.character_selection.index = colors.indexOf(color);
     }
     var events = {
         loading: {
             loaded: function () {
-                layers.intro_hourglass.stop();
+                layers_2.layers.intro_hourglass.stop();
                 return 'intro_dunes';
             }
         },
@@ -973,7 +1038,7 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
             continue: function () {
                 sounds.sea.loop = true;
                 sounds.sea.play();
-                layers.intro_crab.start();
+                layers_2.layers.intro_crab.start();
                 return 'intro_crab';
             }
         },
@@ -982,11 +1047,11 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
         },
         intro_crab_nav: {
             rewind: function () {
-                layers.intro_crab.start();
+                layers_2.layers.intro_crab.start();
                 return 'intro_crab';
             },
             next: function () {
-                layers.intro_sea.start();
+                layers_2.layers.intro_sea.start();
                 return 'intro_sea';
             }
         },
@@ -995,11 +1060,11 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
         },
         intro_sea_nav: {
             rewind: function () {
-                layers.intro_sea.start();
+                layers_2.layers.intro_sea.start();
                 return 'intro_sea';
             },
             next: function () {
-                layers.intro_hand.start();
+                layers_2.layers.intro_hand.start();
                 return 'intro_hand';
             }
         },
@@ -1008,35 +1073,35 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
         },
         intro_hand_nav: {
             rewind: function () {
-                layers.intro_hand.start();
+                layers_2.layers.intro_hand.start();
                 return 'intro_hand';
             },
             next: function () { return 'intro_shell'; }
         },
         intro_shell: {
             pickup: function () {
-                layers.intro_shell_pickup.start();
+                layers_2.layers.intro_shell_pickup.start();
                 return 'intro_shell_pickup';
             }
         },
         intro_shell_pickup: {
             finish: function () {
-                layers.intro_welcome.start();
+                layers_2.layers.intro_welcome.start();
                 return 'intro_welcome';
             }
         },
         intro_welcome: {
             next: function () {
-                layers.intro_welcome.stop();
-                layers.intro_load.start();
+                layers_2.layers.intro_welcome.stop();
+                layers_2.layers.intro_load.start();
                 return 'intro_load';
             }
         },
         intro_load: {
             finish: function () {
-                layers.intro_load.stop();
-                layers.character_background.start();
-                layers.character_characters.start();
+                layers_2.layers.intro_load.stop();
+                layers_2.layers.character_background.start();
+                layers_2.layers.character_characters.start();
                 set_character('yellow');
                 return 'intro_character';
             }
@@ -1052,8 +1117,8 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
                 set_character('green');
             },
             start: function () {
-                layers.character_background.stop();
-                layers.character_characters.stop();
+                layers_2.layers.character_background.stop();
+                layers_2.layers.character_characters.stop();
                 set_landscape(true);
                 return 'landscape';
             }
@@ -1063,14 +1128,14 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
             farmer_left: function () {
                 if (!state.windmill_completed) {
                     set_landscape(false);
-                    layers.windmill_intro.start();
+                    layers_2.layers.windmill_intro.start();
                     return 'windmill_intro';
                 }
             },
             farmer_right: function () {
                 if (!state.garden_completed) {
                     set_landscape(false);
-                    layers.garden_intro.start();
+                    layers_2.layers.garden_intro.start();
                     return 'garden_intro';
                 }
             }
@@ -1078,8 +1143,8 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
         landscape_get_star: {
             continue: function () {
                 if (state.windmill_completed && state.garden_completed) {
-                    layers.get_bottle.start();
-                    return 'get_bottle';
+                    layers_2.layers.bottle_get.start();
+                    return 'bottle_get';
                 }
                 else {
                     set_landscape(true);
@@ -1090,7 +1155,7 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
         // Garden minigame
         garden_intro: {
             start: function () {
-                layers.garden_intro.stop();
+                layers_2.layers.garden_intro.stop();
                 play_garden_trashcan_once();
                 return 'garden_game';
             }
@@ -1102,21 +1167,21 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
                 state.cleanup++;
                 if (state.cleanup == 8) {
                     state.garden_completed = true;
-                    layers.garden_completed.start();
+                    layers_2.layers.garden_completed.start();
                     return 'garden_completed';
                 }
             }
         },
         garden_completed: {
             next: function () {
-                layers.landscape_get_star.start();
+                layers_2.layers.landscape_get_star.start();
                 return 'landscape_get_star';
             }
         },
         // Windmill minigame
         windmill_intro: {
             start: function () {
-                layers.windmill_intro.stop();
+                layers_2.layers.windmill_intro.stop();
                 return 'windmill_explain';
             }
         },
@@ -1132,45 +1197,92 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
                 state.connect++;
                 if (state.connect == 3) {
                     state.windmill_completed = true;
-                    layers.windmill_working.index = 0;
-                    layers.windmill_working.layers[0].start();
-                    layers.windmill_next.index = 0;
+                    layers_2.layers.windmill_working.index = 0;
+                    layers_2.layers.windmill_working.layers[0].start();
+                    layers_2.layers.windmill_next.index = 0;
                 }
             },
             next: function () {
-                layers.windmill_completed.start();
+                layers_2.layers.windmill_completed.start();
                 return 'windmill_completed';
             }
         },
         windmill_completed: {
             open: function () {
-                layers.landscape_get_star.start();
+                layers_2.layers.landscape_get_star.start();
                 return 'landscape_get_star';
             }
         },
         // Opening the bottle
-        get_bottle: {
+        bottle_get: {
             continue: function () {
-                layers.click_bottle.start();
-                return 'click_bottle';
+                layers_2.layers.bottle_click.start();
+                return 'bottle_click';
             }
         },
-        click_bottle: {
+        bottle_click: {
             open: function () {
-                layers.click_bottle.stop();
-                layers.open_bottle.start();
-                return 'open_bottle';
+                layers_2.layers.bottle_click.stop();
+                layers_2.layers.bottle_open.start();
+                return 'bottle_open';
             }
         },
-        open_bottle: {
+        bottle_open: {
             finish: function () {
-                layers.map.start();
-                return 'map';
+                layers_2.layers.bottle_map.start();
+                return 'bottle_map';
             }
         },
-        map: {}
+        bottle_map: {
+            go: function () {
+                layers_2.layers.flower_intro.start();
+                return 'flower_intro';
+            }
+        },
+        // Flower minigame
+        flower_intro: {
+            next: function () {
+                layers_2.layers.flower_intro.stop();
+                return 'flower_explain';
+            }
+        },
+        flower_explain: {
+            start: function () {
+                layers_2.layers.flower_background.start();
+                var interval_id = window.setInterval(function () {
+                    if (state.flower_completed) {
+                        window.clearInterval(interval_id);
+                    }
+                    else {
+                        var v = layers_2.layers.flower_background.video;
+                        if (v.currentTime / v.duration >= state.watered / 5) {
+                            layers_2.layers.flower_background.stop();
+                        }
+                    }
+                }, 100);
+                return 'flower_game';
+            }
+        },
+        flower_game: {
+            water: function () {
+                play_sound('water');
+                state.watered++;
+                layers_2.layers.flower_background.continue();
+                if (state.watered == 5) {
+                    state.flower_completed = true;
+                    return 'flower_done';
+                }
+            }
+        },
+        flower_done: {
+            next: function () {
+                layers_2.layers.flower_completed.start();
+                return 'flower_completed';
+            }
+        },
+        flower_completed: {}
     };
-    exports.story = new story_4.Story(views, events, 'loading');
+    exports.story = new story_5.Story(views_1.views, events, 'loading');
     function start() {
         return __awaiter(this, void 0, void 0, function () {
             var promises, l;
@@ -1178,15 +1290,15 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
                 switch (_a.label) {
                     case 0: 
                     // First load the load animation.
-                    return [4 /*yield*/, layers.intro_hourglass.load()];
+                    return [4 /*yield*/, layers_2.layers.intro_hourglass.load()];
                     case 1:
                         // First load the load animation.
                         _a.sent();
-                        layers.intro_hourglass.start();
+                        layers_2.layers.intro_hourglass.start();
                         promises = [];
-                        for (l in layers) {
+                        for (l in layers_2.layers) {
                             if (l != 'intro_hourglass') {
-                                promises.push(layers[l].load());
+                                promises.push(layers_2.layers[l].load());
                             }
                         }
                         return [4 /*yield*/, Promise.all(promises)];
@@ -1202,7 +1314,7 @@ define("game", ["require", "exports", "util/math", "layer/all", "story"], functi
 });
 // Main Program
 // ============
-define("main", ["require", "exports", "util/math", "story", "game"], function (require, exports, m, story_5, game_1) {
+define("main", ["require", "exports", "util/math", "story", "game/logic"], function (require, exports, m, story_6, logic_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     // Auto-playing video with sound is allowed after user interaction:
@@ -1223,20 +1335,20 @@ define("main", ["require", "exports", "util/math", "story", "game"], function (r
     }
     canvas.addEventListener('pointerdown', function (e) {
         e.preventDefault();
-        game_1.story.handle(coordinate(e), story_5.Trigger.Down);
+        logic_1.story.handle(coordinate(e), story_6.Trigger.Down);
     }, { passive: false });
     canvas.addEventListener('pointermove', function (e) {
         e.preventDefault();
-        game_1.story.handle(coordinate(e), story_5.Trigger.Move);
+        logic_1.story.handle(coordinate(e), story_6.Trigger.Move);
     }, { passive: false });
     canvas.addEventListener('pointercancel', function (e) {
-        game_1.story.handle(coordinate(e), story_5.Trigger.Cancel);
+        logic_1.story.handle(coordinate(e), story_6.Trigger.Cancel);
     }, { passive: false });
     canvas.addEventListener('pointerout', function (e) {
-        game_1.story.handle(coordinate(e), story_5.Trigger.Cancel);
+        logic_1.story.handle(coordinate(e), story_6.Trigger.Cancel);
     }, { passive: false });
     canvas.addEventListener('pointerup', function (e) {
-        game_1.story.handle(coordinate(e), story_5.Trigger.Up);
+        logic_1.story.handle(coordinate(e), story_6.Trigger.Up);
     }, { passive: false });
     // Get rid of gestures
     // -------------------
@@ -1251,9 +1363,9 @@ define("main", ["require", "exports", "util/math", "story", "game"], function (r
     function draw() {
         // Don't clear to prevent flashes between views.
         //ctx.clearRect(0, 0, size.x, size.y)
-        game_1.story.draw(ctx);
+        logic_1.story.draw(ctx);
         requestAnimationFrame(draw);
     }
     draw();
-    (0, game_1.start)();
+    (0, logic_1.start)();
 });
