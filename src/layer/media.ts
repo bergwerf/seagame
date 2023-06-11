@@ -42,7 +42,7 @@ export class Video implements Layer {
     this.video = document.createElement("video")
     this.video.muted = muted
     this.video.loop = loop
-    this.video.style.display = 'none'
+    this.video.playsInline = true
   }
 
   async load() {

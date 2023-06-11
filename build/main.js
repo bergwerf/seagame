@@ -365,7 +365,7 @@ define("layer/media", ["require", "exports", "util/canvas", "../util/gifler"], f
             this.video = document.createElement("video");
             this.video.muted = muted;
             this.video.loop = loop;
-            this.video.style.display = 'none';
+            this.video.playsInline = true;
         }
         Video.prototype.load = function () {
             return __awaiter(this, void 0, void 0, function () {
