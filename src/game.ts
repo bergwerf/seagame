@@ -66,6 +66,7 @@ const layers = {
   ]),
   landscape_lmask: new layer.Click_Mask('assets/landscape/farmer_left_mask.png', 'farmer_left'),
   landscape_rmask: new layer.Click_Mask('assets/landscape/farmer_right_mask.png', 'farmer_right'),
+  landscape_get_star: new layer.Video('assets/landscape/get_star.mp4', { loop: true }),
 
   // Garden minigame
   garden_intro: new layer.Video('assets/garden/intro.mp4', { muted: false, loop: true }),
@@ -81,6 +82,7 @@ const layers = {
   garden_item6: garden_item_layer('lamp'),
   garden_item7: garden_item_layer('paper'),
   garden_item8: garden_item_layer('spoon'),
+  garden_completed: new layer.Video('assets/garden/completed.mp4'),
 
   // Windmill minigame
   windmill_intro: new layer.Video('assets/windmill/intro.mp4', { muted: false, loop: true }),
@@ -96,6 +98,18 @@ const layers = {
   windmill_maze_red1: new layer.Click_Mask('assets/windmill/maze_red1.png', 'hit', Trigger.Down),
   windmill_maze_red2: new layer.Click_Mask('assets/windmill/maze_red2.png', 'hit', Trigger.Down),
   windmill_working: new layer.Switch([new layer.GIF('assets/windmill/working.gif')]),
+  windmill_next: new layer.Switch([
+    new layer.Composite([
+      new layer.Image('assets/nav/next.png'),
+      new layer.Click_Mask('assets/nav/next_mask.png', 'next')
+    ])]),
+  windmill_completed: new layer.Video('assets/windmill/completed.mp4'),
+
+  // Opening the bottle
+  get_bottle: new layer.Video('assets/bottle/get_bottle.mp4'),
+  click_bottle: new layer.Video('assets/bottle/click_bottle.mp4', { loop: true }),
+  open_bottle: new layer.Video('assets/bottle/open_bottle.mp4'),
+  map: new layer.Video('assets/bottle/map.mp4', { loop: true })
 }
 
 const views = {
@@ -137,6 +151,7 @@ const views = {
     layers.character_start_mask
   ]),
 
+  // Side-scroll landscape
   landscape: new layer.Sidescroll(
     new layer.Composite([
       layers.landscape_bg,
@@ -145,7 +160,12 @@ const views = {
     ]),
     layers.landscape_nav,
     5760, 1920, -1950),
+  landscape_get_star: new layer.Composite([
+    layers.landscape_get_star,
+    new layer.Click_Anywhere('continue')
+  ]),
 
+  // Garden minigame
   garden_intro: new layer.Composite([
     layers.garden_intro,
     layers.garden_start
@@ -162,7 +182,12 @@ const views = {
     new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item7, 'trash'),
     new layer.Drag_to_Target(layers.garden_trashcan_mask, layers.garden_item8, 'trash')
   ]),
+  garden_completed: new layer.Composite([
+    layers.garden_completed,
+    layers.nav_next
+  ]),
 
+  // Windmill minigame
   windmill_intro: new layer.Composite([
     layers.windmill_intro,
     layers.windmill_intro_mask
@@ -191,7 +216,26 @@ const views = {
       layers.windmill_maze,
       20, 25, '#bb252e', 'black'
     ),
-    layers.windmill_working
+    layers.windmill_working,
+    layers.windmill_next
+  ]),
+  windmill_completed: new layer.Composite([
+    layers.windmill_completed,
+    new layer.Click_Anywhere('open')
+  ]),
+
+  // Opening the bottle
+  get_bottle: new layer.Composite([
+    layers.get_bottle,
+    new layer.Click_Anywhere('continue')
+  ]),
+  click_bottle: new layer.Composite([
+    layers.click_bottle,
+    new layer.Click_Anywhere('open')
+  ]),
+  open_bottle: layers.open_bottle,
+  map: new layer.Composite([
+    layers.map
   ])
 }
 
@@ -204,12 +248,32 @@ const sounds = {
 
 const state = {
   cleanup: 0,
-  connect: 0
+  connect: 0,
+  windmill_completed: false,
+  garden_completed: false
 }
 
 function play_sound(name: keyof typeof sounds) {
   sounds[name].load()
   sounds[name].play()
+}
+
+function set_landscape(start: boolean) {
+  layers.landscape_bg.layers[0].stop()
+  layers.landscape_bg.layers[1].stop()
+  layers.landscape_bg.layers[2].stop()
+  if (start) {
+    if (state.windmill_completed) {
+      layers.landscape_bg.index = 1
+      layers.landscape_bg.layers[1].start()
+    } else if (state.garden_completed) {
+      layers.landscape_bg.index = 2
+      layers.landscape_bg.layers[2].start()
+    } else {
+      layers.landscape_bg.index = 0
+      layers.landscape_bg.layers[0].start()
+    }
+  }
 }
 
 function play_garden_trashcan_once() {
@@ -316,21 +380,41 @@ const events: Event_Map<keyof typeof views> = {
     start: () => {
       layers.character_background.stop()
       layers.character_characters.stop()
-      layers.landscape_bg.layers[0].start()
-      layers.landscape_bg.index = 0
+      set_landscape(true)
       return 'landscape'
     }
   },
+
+  // Side-scrolling landscape
   landscape: {
     farmer_left: () => {
-      layers.windmill_intro.start()
-      return 'windmill_intro'
+      if (!state.windmill_completed) {
+        set_landscape(false)
+        layers.windmill_intro.start()
+        return 'windmill_intro'
+      }
     },
     farmer_right: () => {
-      layers.garden_intro.start()
-      return 'garden_intro'
+      if (!state.garden_completed) {
+        set_landscape(false)
+        layers.garden_intro.start()
+        return 'garden_intro'
+      }
     }
   },
+  landscape_get_star: {
+    continue: () => {
+      if (state.windmill_completed && state.garden_completed) {
+        layers.get_bottle.start()
+        return 'get_bottle'
+      } else {
+        set_landscape(true)
+        return 'landscape'
+      }
+    }
+  },
+
+  // Garden minigame
   garden_intro: {
     start: () => {
       layers.garden_intro.stop()
@@ -343,8 +427,21 @@ const events: Event_Map<keyof typeof views> = {
       play_garden_trashcan_once()
       play_sound('trashcan')
       state.cleanup++
+      if (state.cleanup == 8) {
+        state.garden_completed = true
+        layers.garden_completed.start()
+        return 'garden_completed'
+      }
     }
   },
+  garden_completed: {
+    next: () => {
+      layers.landscape_get_star.start()
+      return 'landscape_get_star'
+    }
+  },
+
+  // Windmill minigame
   windmill_intro: {
     start: () => {
       layers.windmill_intro.stop()
@@ -362,11 +459,45 @@ const events: Event_Map<keyof typeof views> = {
       play_sound('connect')
       state.connect++
       if (state.connect == 3) {
+        state.windmill_completed = true
         layers.windmill_working.index = 0
         layers.windmill_working.layers[0].start()
+        layers.windmill_next.index = 0
       }
+    },
+    next: () => {
+      layers.windmill_completed.start()
+      return 'windmill_completed'
     }
-  }
+  },
+  windmill_completed: {
+    open: () => {
+      layers.landscape_get_star.start()
+      return 'landscape_get_star'
+    }
+  },
+
+  // Opening the bottle
+  get_bottle: {
+    continue: () => {
+      layers.click_bottle.start()
+      return 'click_bottle'
+    }
+  },
+  click_bottle: {
+    open: () => {
+      layers.click_bottle.stop()
+      layers.open_bottle.start()
+      return 'open_bottle'
+    }
+  },
+  open_bottle: {
+    finish: () => {
+      layers.map.start()
+      return 'map'
+    }
+  },
+  map: {}
 }
 
 export const story = new Story<keyof typeof views>(
