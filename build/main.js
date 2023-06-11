@@ -728,7 +728,8 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         ])
     };
     var audio = {
-        sea: new Audio('assets/sound/sea.mp3')
+        sea: new Audio('assets/sound/sea.mp3'),
+        trashcan: new Audio('assets/sound/trashcan.mp3')
     };
     var state = {
         cleanup: 0
@@ -863,6 +864,7 @@ define("game", ["require", "exports", "layer/all", "story"], function (require, 
         garden_game: {
             trash: function () {
                 play_garden_trashcan_once();
+                audio.trashcan.play();
                 state.cleanup++;
             }
         }

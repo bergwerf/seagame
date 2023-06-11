@@ -149,7 +149,8 @@ const views = {
 }
 
 const audio = {
-  sea: new Audio('assets/sound/sea.mp3')
+  sea: new Audio('assets/sound/sea.mp3'),
+  trashcan: new Audio('assets/sound/trashcan.mp3')
 }
 
 const state = {
@@ -288,6 +289,7 @@ const events: Event_Map<keyof typeof views> = {
   garden_game: {
     trash: () => {
       play_garden_trashcan_once()
+      audio.trashcan.play()
       state.cleanup++
     }
   }
