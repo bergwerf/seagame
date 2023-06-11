@@ -382,10 +382,10 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
                                 }
                                 _this.cache = canvas.create(w, h);
                                 _this.cache_ctx = _this.cache.getContext('2d');
-                                resolve();
                             }, { once: true });
                             _this.video.src = _this.src;
                             _this.video.load();
+                            resolve();
                         })];
                 });
             });
@@ -764,6 +764,17 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
             new layer.Click_Mask('assets/character/green_mask.png', 'green')
         ]),
         character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
+        character_back: new layer.Switch([
+            new layer.Image('assets/character/orange_back.png'),
+            new layer.Image('assets/character/yellow_back.png'),
+            new layer.Image('assets/character/green_back.png')
+        ]),
+        frame_stars: new layer.Switch([
+            new layer.Image('assets/frame/one_star.png'),
+            new layer.Image('assets/frame/two_stars.png'),
+            new layer.Image('assets/frame/three_stars.png'),
+            new layer.Image('assets/frame/four_stars.png'),
+        ]),
         // Side-scroll landscape
         landscape_bg: new layer.Switch([
             new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
@@ -881,19 +892,25 @@ define("game/views", ["require", "exports", "layer/all", "game/layers"], functio
             layers_1.layers.character_start_mask
         ]),
         // Side-scroll landscape
-        landscape: new layer.Sidescroll(new layer.Composite([
-            layers_1.layers.landscape_bg,
-            layers_1.layers.landscape_lmask,
-            layers_1.layers.landscape_rmask
-        ]), layers_1.layers.landscape_nav, 5760, 1920, -1950),
+        landscape: new layer.Composite([
+            new layer.Sidescroll(new layer.Composite([
+                layers_1.layers.landscape_bg,
+                layers_1.layers.landscape_lmask,
+                layers_1.layers.landscape_rmask
+            ]), layers_1.layers.landscape_nav, 5760, 1920, -1950),
+            layers_1.layers.character_back,
+            layers_1.layers.frame_stars
+        ]),
         landscape_get_star: new layer.Composite([
             layers_1.layers.landscape_get_star,
-            new layer.Click_Anywhere('continue')
+            new layer.Click_Anywhere('continue'),
+            layers_1.layers.frame_stars
         ]),
         // Garden minigame
         garden_intro: new layer.Composite([
             layers_1.layers.garden_intro,
-            layers_1.layers.garden_start
+            layers_1.layers.garden_start,
+            layers_1.layers.frame_stars
         ]),
         garden_game: new layer.Composite([
             layers_1.layers.garden_background,
@@ -905,55 +922,66 @@ define("game/views", ["require", "exports", "layer/all", "game/layers"], functio
             new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item5, 'trash'),
             new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item6, 'trash'),
             new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item7, 'trash'),
-            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item8, 'trash')
+            new layer.Drag_to_Target(layers_1.layers.garden_trashcan_mask, layers_1.layers.garden_item8, 'trash'),
+            layers_1.layers.frame_stars
         ]),
         garden_completed: new layer.Composite([
             layers_1.layers.garden_completed,
-            layers_1.layers.nav_next
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
         ]),
         // Windmill minigame
         windmill_intro: new layer.Composite([
             layers_1.layers.windmill_intro,
-            layers_1.layers.windmill_intro_mask
+            layers_1.layers.windmill_intro_mask,
+            layers_1.layers.frame_stars
         ]),
         windmill_explain: new layer.Composite([
             layers_1.layers.windmill_explain,
-            layers_1.layers.windmill_explain_mask
+            layers_1.layers.windmill_explain_mask,
+            layers_1.layers.frame_stars
         ]),
         windmill_game: new layer.Composite([
             layers_1.layers.windmill_background,
-            new layer.Complete_Maze(layers_1.layers.windmill_maze_green1, layers_1.layers.windmill_maze_green2, layers_1.layers.windmill_maze, 20, 25, '#a5c000', 'black'),
-            new layer.Complete_Maze(layers_1.layers.windmill_maze_orange1, layers_1.layers.windmill_maze_orange2, layers_1.layers.windmill_maze, 20, 25, '#c25d00', 'black'),
             new layer.Complete_Maze(layers_1.layers.windmill_maze_red1, layers_1.layers.windmill_maze_red2, layers_1.layers.windmill_maze, 20, 25, '#bb252e', 'black'),
+            new layer.Complete_Maze(layers_1.layers.windmill_maze_orange1, layers_1.layers.windmill_maze_orange2, layers_1.layers.windmill_maze, 20, 25, '#c25d00', 'black'),
+            new layer.Complete_Maze(layers_1.layers.windmill_maze_green1, layers_1.layers.windmill_maze_green2, layers_1.layers.windmill_maze, 20, 25, '#a5c000', 'black'),
             layers_1.layers.windmill_working,
-            layers_1.layers.windmill_next
+            layers_1.layers.windmill_next,
+            layers_1.layers.frame_stars
         ]),
         windmill_completed: new layer.Composite([
             layers_1.layers.windmill_completed,
-            new layer.Click_Anywhere('open')
+            new layer.Click_Anywhere('open'),
+            layers_1.layers.frame_stars
         ]),
         // Opening the bottle
         bottle_get: new layer.Composite([
             layers_1.layers.bottle_get,
-            new layer.Click_Anywhere('continue')
+            new layer.Click_Anywhere('continue'),
+            layers_1.layers.frame_stars
         ]),
         bottle_click: new layer.Composite([
             layers_1.layers.bottle_click,
-            layers_1.layers.bottle_click_mask
+            layers_1.layers.bottle_click_mask,
+            layers_1.layers.frame_stars
         ]),
         bottle_open: layers_1.layers.bottle_open,
         bottle_map: new layer.Composite([
             layers_1.layers.bottle_map,
-            layers_1.layers.bottle_map_mask
+            layers_1.layers.bottle_map_mask,
+            layers_1.layers.frame_stars
         ]),
         // Flower minigame
         flower_intro: new layer.Composite([
             layers_1.layers.flower_intro,
-            layers_1.layers.nav_next
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
         ]),
         flower_explain: new layer.Composite([
             layers_1.layers.flower_explain,
-            layers_1.layers.flower_explain_mask
+            layers_1.layers.flower_explain_mask,
+            layers_1.layers.frame_stars
         ]),
         flower_game: new layer.Composite([
             layers_1.layers.flower_background,
@@ -961,15 +989,18 @@ define("game/views", ["require", "exports", "layer/all", "game/layers"], functio
             new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water2, 'water'),
             new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water3, 'water'),
             new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water4, 'water'),
-            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water5, 'water')
+            new layer.Drag_to_Target(layers_1.layers.flower_target_mask, layers_1.layers.flower_water5, 'water'),
+            layers_1.layers.frame_stars
         ]),
         flower_done: new layer.Composite([
             layers_1.layers.flower_background,
-            layers_1.layers.nav_next
+            layers_1.layers.nav_next,
+            layers_1.layers.frame_stars
         ]),
         flower_completed: new layer.Composite([
             layers_1.layers.flower_completed,
-            new layer.Click_Anywhere('continue')
+            new layer.Click_Anywhere('continue'),
+            layers_1.layers.frame_stars
         ])
     };
 });
@@ -1000,7 +1031,22 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
     }
     function set_character(color) {
         var colors = ['orange', 'yellow', 'green'];
-        layers_2.layers.character_selection.index = colors.indexOf(color);
+        var index = colors.indexOf(color);
+        layers_2.layers.character_selection.index = index;
+        layers_2.layers.character_back.index = index;
+    }
+    function update_stars() {
+        var s = layers_2.layers.frame_stars;
+        s.index = -1;
+        if (state.windmill_completed) {
+            s.index++;
+        }
+        if (state.garden_completed) {
+            s.index++;
+        }
+        if (state.flower_completed) {
+            s.index++;
+        }
     }
     function set_landscape(start) {
         layers_2.layers.landscape_bg.layers[0].stop();
@@ -1142,6 +1188,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         landscape_get_star: {
             continue: function () {
+                update_stars();
                 if (state.windmill_completed && state.garden_completed) {
                     layers_2.layers.bottle_get.start();
                     return 'bottle_get';

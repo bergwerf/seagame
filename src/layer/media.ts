@@ -58,10 +58,10 @@ export class Video implements Layer {
         }
         this.cache = canvas.create(w, h)
         this.cache_ctx = this.cache.getContext('2d')!
-        resolve()
       }, { once: true })
       this.video.src = this.src
       this.video.load()
+      resolve()
     })
   }
 

@@ -58,6 +58,17 @@ export const layers = {
     new layer.Click_Mask('assets/character/green_mask.png', 'green')
   ]),
   character_start_mask: new layer.Click_Mask('assets/character/start_mask.png', 'start'),
+  character_back: new layer.Switch([
+    new layer.Image('assets/character/orange_back.png'),
+    new layer.Image('assets/character/yellow_back.png'),
+    new layer.Image('assets/character/green_back.png')
+  ]),
+  frame_stars: new layer.Switch([
+    new layer.Image('assets/frame/one_star.png'),
+    new layer.Image('assets/frame/two_stars.png'),
+    new layer.Image('assets/frame/three_stars.png'),
+    new layer.Image('assets/frame/four_stars.png'),
+  ]),
 
   // Side-scroll landscape
   landscape_bg: new layer.Switch([

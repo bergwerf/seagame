@@ -29,7 +29,17 @@ function play_sound(name: keyof typeof sounds) {
 
 function set_character(color: string) {
   const colors = ['orange', 'yellow', 'green']
-  layers.character_selection.index = colors.indexOf(color)
+  const index = colors.indexOf(color)
+  layers.character_selection.index = index
+  layers.character_back.index = index
+}
+
+function update_stars() {
+  let s = layers.frame_stars
+  s.index = -1
+  if (state.windmill_completed) { s.index++ }
+  if (state.garden_completed) { s.index++ }
+  if (state.flower_completed) { s.index++ }
 }
 
 function set_landscape(start: boolean) {
@@ -173,6 +183,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   landscape_get_star: {
     continue: () => {
+      update_stars()
       if (state.windmill_completed && state.garden_completed) {
         layers.bottle_get.start()
         return 'bottle_get'
