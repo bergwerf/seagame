@@ -91,8 +91,8 @@ const events: Event_Map<keyof typeof views> = {
     continue: () => {
       sounds.sea.loop = true
       sounds.sea.play()
-      layers.cleanup_completed.start()
-      return 'finish_cake_next'
+      layers.intro_crab.start()
+      return 'intro_crab'
     }
   },
   intro_crab: {

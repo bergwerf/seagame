@@ -1248,8 +1248,8 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             continue: function () {
                 sounds.sea.loop = true;
                 sounds.sea.play();
-                layers_2.layers.cleanup_completed.start();
-                return 'finish_cake_next';
+                layers_2.layers.intro_crab.start();
+                return 'intro_crab';
             }
         },
         intro_crab: {
