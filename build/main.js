@@ -1249,7 +1249,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 sounds.sea.loop = true;
                 sounds.sea.play();
                 layers_2.layers.intro_crab.start();
-                return 'intro_crab';
+                return 'flower_done';
             }
         },
         intro_crab: {
@@ -1538,7 +1538,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 layers_2.layers.cleanup_walk.start();
                 window.setTimeout(function () {
                     layers_2.layers.cleanup_walk.stop();
-                }, 200);
+                }, 500);
                 return 'cleanup_walk';
             }
         },
@@ -1613,7 +1613,11 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 return 'finish_credits';
             }
         },
-        finish_credits: {}
+        finish_credits: {
+            finish: function () {
+                sounds.happy.loop = false;
+            }
+        }
     };
     exports.story = new story_7.Story(views_1.views, events, 'loading');
     function start() {

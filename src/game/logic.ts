@@ -92,7 +92,7 @@ const events: Event_Map<keyof typeof views> = {
       sounds.sea.loop = true
       sounds.sea.play()
       layers.intro_crab.start()
-      return 'intro_crab'
+      return 'flower_done'
     }
   },
   intro_crab: {
@@ -386,7 +386,7 @@ const events: Event_Map<keyof typeof views> = {
       layers.cleanup_walk.start()
       window.setTimeout(() => {
         layers.cleanup_walk.stop()
-      }, 200)
+      }, 500)
       return 'cleanup_walk'
     }
   },
@@ -463,7 +463,11 @@ const events: Event_Map<keyof typeof views> = {
       return 'finish_credits'
     }
   },
-  finish_credits: {}
+  finish_credits: {
+    finish: () => {
+      sounds.happy.loop = false
+    }
+  }
 }
 
 export const story = new Story<keyof typeof views>(
