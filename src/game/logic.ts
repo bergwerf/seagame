@@ -92,7 +92,7 @@ const events: Event_Map<keyof typeof views> = {
       sounds.sea.loop = true
       sounds.sea.play()
       layers.intro_crab.start()
-      return 'flower_done'
+      return 'intro_crab'
     }
   },
   intro_crab: {

@@ -1249,7 +1249,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 sounds.sea.loop = true;
                 sounds.sea.play();
                 layers_2.layers.intro_crab.start();
-                return 'flower_done';
+                return 'intro_crab';
             }
         },
         intro_crab: {
