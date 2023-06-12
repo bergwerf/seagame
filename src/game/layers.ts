@@ -71,7 +71,7 @@ export const layers = {
   ]),
 
   // Side-scroll landscape
-  landscape_bg: new layer.Switch([
+  landscape_background: new layer.Switch([
     new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
     new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
     new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true, resize: m.vec2(5760, 1080) })

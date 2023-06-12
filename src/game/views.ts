@@ -48,7 +48,7 @@ export const views = {
   landscape: new layer.Composite([
     new layer.Sidescroll(
       new layer.Composite([
-        layers.landscape_bg,
+        layers.landscape_background,
         layers.landscape_lmask,
         layers.landscape_rmask
       ]),
@@ -216,8 +216,7 @@ export const views = {
   // Game finish
   finish_happy: new layer.Composite([
     layers.finish_happy,
-    layers.nav_next,
-    layers.frame_stars
+    layers.nav_next
   ]),
   finish_cake: layers.finish_cake
 }

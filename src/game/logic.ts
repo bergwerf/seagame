@@ -52,19 +52,20 @@ function update_stars() {
 }
 
 function set_landscape(start: boolean) {
-  layers.landscape_bg.layers[0].stop()
-  layers.landscape_bg.layers[1].stop()
-  layers.landscape_bg.layers[2].stop()
+  const bg = layers.landscape_background
+  bg.layers[0].stop()
+  bg.layers[1].stop()
+  bg.layers[2].stop()
   if (start) {
     if (state.windmill_completed) {
-      layers.landscape_bg.index = 1
-      layers.landscape_bg.layers[1].start()
+      bg.index = 1
+      bg.layers[1].start()
     } else if (state.garden_completed) {
-      layers.landscape_bg.index = 2
-      layers.landscape_bg.layers[2].start()
+      bg.index = 2
+      bg.layers[2].start()
     } else {
-      layers.landscape_bg.index = 0
-      layers.landscape_bg.layers[0].start()
+      bg.index = 0
+      bg.layers[0].start()
     }
   }
 }
@@ -160,6 +161,14 @@ const events: Event_Map<keyof typeof views> = {
   },
   intro_load: {
     finish: () => {
+      // Optimization: clear some videos that are not needed anymore.
+      layers.intro_hourglass.video.src = ''
+      layers.intro_crab.video.src = ''
+      layers.intro_sea.video.src = ''
+      layers.intro_hand.video.src = ''
+      layers.intro_shell_pickup.video.src = ''
+      layers.intro_welcome.video.src = ''
+
       layers.intro_load.stop()
       layers.character_background.start()
       layers.character_characters.start()
@@ -211,6 +220,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   landscape_get_star: {
     continue: () => {
+      layers.landscape_get_star.stop()
       update_stars()
       if (state.windmill_completed && state.garden_completed) {
         layers.bottle_get.start()
@@ -294,6 +304,14 @@ const events: Event_Map<keyof typeof views> = {
   // Opening the bottle
   bottle_get: {
     continue: () => {
+      // Optimization: clear some videos that are not needed anymore.
+      layers.character_background.video.src = ''
+      layers.garden_intro.video.src = ''
+      layers.windmill_intro.video.src = ''
+      layers.landscape_background.layers[0].video.src = ''
+      layers.landscape_background.layers[1].video.src = ''
+      layers.landscape_background.layers[2].video.src = ''
+
       layers.bottle_click.start()
       return 'bottle_click'
     }
@@ -328,6 +346,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   flower_explain: {
     start: () => {
+      play_sound('click')
       layers.flower_background.start()
       const interval_id = window.setInterval(() => {
         if (state.flower_completed) {
@@ -364,6 +383,10 @@ const events: Event_Map<keyof typeof views> = {
     continue: () => {
       update_stars()
       layers.flower_completed.stop()
+      layers.cleanup_walk.start()
+      window.setTimeout(() => {
+        layers.cleanup_walk.stop()
+      }, 200)
       return 'cleanup_walk'
     }
   },
@@ -387,6 +410,7 @@ const events: Event_Map<keyof typeof views> = {
   },
   cleanup_intro: {
     continue: () => {
+      play_sound('click')
       layers.cleanup_intro.stop()
       return 'cleanup_game'
     }
@@ -421,6 +445,7 @@ const events: Event_Map<keyof typeof views> = {
   // Game finish
   finish_happy: {
     next: () => {
+      play_sound('click')
       layers.finish_happy.stop()
       layers.finish_cake.start()
       return 'finish_cake'

@@ -854,7 +854,7 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
             new layer.Image('assets/frame/four_stars.png'),
         ]),
         // Side-scroll landscape
-        landscape_bg: new layer.Switch([
+        landscape_background: new layer.Switch([
             new layer.Video('assets/landscape/bg_sad_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
             new layer.Video('assets/landscape/bg_happy_sad.mp4', { loop: true, resize: m.vec2(5760, 1080) }),
             new layer.Video('assets/landscape/bg_sad_happy.mp4', { loop: true, resize: m.vec2(5760, 1080) })
@@ -982,7 +982,7 @@ define("game/views", ["require", "exports", "layer/all", "story", "game/layers"]
         // Side-scroll landscape
         landscape: new layer.Composite([
             new layer.Sidescroll(new layer.Composite([
-                layers_1.layers.landscape_bg,
+                layers_1.layers.landscape_background,
                 layers_1.layers.landscape_lmask,
                 layers_1.layers.landscape_rmask
             ]), layers_1.layers.landscape_nav, 5760, 1920, -1950),
@@ -1127,8 +1127,7 @@ define("game/views", ["require", "exports", "layer/all", "story", "game/layers"]
         // Game finish
         finish_happy: new layer.Composite([
             layers_1.layers.finish_happy,
-            layers_1.layers.nav_next,
-            layers_1.layers.frame_stars
+            layers_1.layers.nav_next
         ]),
         finish_cake: layers_1.layers.finish_cake
     };
@@ -1188,21 +1187,22 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         }
     }
     function set_landscape(start) {
-        layers_2.layers.landscape_bg.layers[0].stop();
-        layers_2.layers.landscape_bg.layers[1].stop();
-        layers_2.layers.landscape_bg.layers[2].stop();
+        var bg = layers_2.layers.landscape_background;
+        bg.layers[0].stop();
+        bg.layers[1].stop();
+        bg.layers[2].stop();
         if (start) {
             if (state.windmill_completed) {
-                layers_2.layers.landscape_bg.index = 1;
-                layers_2.layers.landscape_bg.layers[1].start();
+                bg.index = 1;
+                bg.layers[1].start();
             }
             else if (state.garden_completed) {
-                layers_2.layers.landscape_bg.index = 2;
-                layers_2.layers.landscape_bg.layers[2].start();
+                bg.index = 2;
+                bg.layers[2].start();
             }
             else {
-                layers_2.layers.landscape_bg.index = 0;
-                layers_2.layers.landscape_bg.layers[0].start();
+                bg.index = 0;
+                bg.layers[0].start();
             }
         }
     }
@@ -1295,6 +1295,13 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         intro_load: {
             finish: function () {
+                // Optimization: clear some videos that are not needed anymore.
+                layers_2.layers.intro_hourglass.video.src = '';
+                layers_2.layers.intro_crab.video.src = '';
+                layers_2.layers.intro_sea.video.src = '';
+                layers_2.layers.intro_hand.video.src = '';
+                layers_2.layers.intro_shell_pickup.video.src = '';
+                layers_2.layers.intro_welcome.video.src = '';
                 layers_2.layers.intro_load.stop();
                 layers_2.layers.character_background.start();
                 layers_2.layers.character_characters.start();
@@ -1345,6 +1352,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         landscape_get_star: {
             continue: function () {
+                layers_2.layers.landscape_get_star.stop();
                 update_stars();
                 if (state.windmill_completed && state.garden_completed) {
                     layers_2.layers.bottle_get.start();
@@ -1426,6 +1434,13 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         // Opening the bottle
         bottle_get: {
             continue: function () {
+                // Optimization: clear some videos that are not needed anymore.
+                layers_2.layers.character_background.video.src = '';
+                layers_2.layers.garden_intro.video.src = '';
+                layers_2.layers.windmill_intro.video.src = '';
+                layers_2.layers.landscape_background.layers[0].video.src = '';
+                layers_2.layers.landscape_background.layers[1].video.src = '';
+                layers_2.layers.landscape_background.layers[2].video.src = '';
                 layers_2.layers.bottle_click.start();
                 return 'bottle_click';
             }
@@ -1459,6 +1474,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         flower_explain: {
             start: function () {
+                play_sound('click');
                 layers_2.layers.flower_background.start();
                 var interval_id = window.setInterval(function () {
                     if (state.flower_completed) {
@@ -1496,6 +1512,10 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             continue: function () {
                 update_stars();
                 layers_2.layers.flower_completed.stop();
+                layers_2.layers.cleanup_walk.start();
+                window.setTimeout(function () {
+                    layers_2.layers.cleanup_walk.stop();
+                }, 200);
                 return 'cleanup_walk';
             }
         },
@@ -1518,6 +1538,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         },
         cleanup_intro: {
             continue: function () {
+                play_sound('click');
                 layers_2.layers.cleanup_intro.stop();
                 return 'cleanup_game';
             }
@@ -1551,6 +1572,7 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
         // Game finish
         finish_happy: {
             next: function () {
+                play_sound('click');
                 layers_2.layers.finish_happy.stop();
                 layers_2.layers.finish_cake.start();
                 return 'finish_cake';
