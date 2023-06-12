@@ -31,20 +31,27 @@ export class Composite<T extends Layer[]> implements Layer {
   }
 
   private run(f: (l: Layer) => string | null) {
+
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
     let event: string | null = null
     for (let layer of this.layers) {
-      const f_event = f(layer)
-      event = event || f_event
+      const e = layer.draw(ctx)
+      event = event || e
     }
     return event
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    return this.run((layer) => layer.draw(ctx))
-  }
-
   handle(v: m.vec2, t: Trigger) {
-    return this.run((layer) => layer.handle(v, t))
+    // Ad-hoc rule: return after the first non-null event.
+    for (let layer of this.layers) {
+      const e = layer.handle(v, t)
+      if (e != null) {
+        return e
+      }
+    }
+    return null
   }
 }
 

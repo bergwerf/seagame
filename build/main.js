@@ -259,19 +259,26 @@ define("layer/basic", ["require", "exports", "util/canvas", "story"], function (
             });
         };
         Composite.prototype.run = function (f) {
+        };
+        Composite.prototype.draw = function (ctx) {
             var event = null;
             for (var _i = 0, _a = this.layers; _i < _a.length; _i++) {
                 var layer = _a[_i];
-                var f_event = f(layer);
-                event = event || f_event;
+                var e = layer.draw(ctx);
+                event = event || e;
             }
             return event;
         };
-        Composite.prototype.draw = function (ctx) {
-            return this.run(function (layer) { return layer.draw(ctx); });
-        };
         Composite.prototype.handle = function (v, t) {
-            return this.run(function (layer) { return layer.handle(v, t); });
+            // Ad-hoc rule: return after the first non-null event.
+            for (var _i = 0, _a = this.layers; _i < _a.length; _i++) {
+                var layer = _a[_i];
+                var e = layer.handle(v, t);
+                if (e != null) {
+                    return e;
+                }
+            }
+            return null;
         };
         return Composite;
     }());
