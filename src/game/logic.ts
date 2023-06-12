@@ -91,8 +91,8 @@ const events: Event_Map<keyof typeof views> = {
     continue: () => {
       sounds.sea.loop = true
       sounds.sea.play()
-      layers.intro_crab.start()
-      return 'intro_crab'
+      layers.cleanup_completed.start()
+      return 'finish_cake_next'
     }
   },
   intro_crab: {
@@ -432,6 +432,9 @@ const events: Event_Map<keyof typeof views> = {
     }
   },
   cleanup_completed: {
+    finish: () => 'cleanup_completed_next'
+  },
+  cleanup_completed_next: {
     next: () => {
       update_stars()
       sounds.guitar.pause()
@@ -451,7 +454,16 @@ const events: Event_Map<keyof typeof views> = {
       return 'finish_cake'
     }
   },
-  finish_cake: {}
+  finish_cake: {
+    finish: () => 'finish_cake_next'
+  },
+  finish_cake_next: {
+    next: () => {
+      layers.finish_credits.start()
+      return 'finish_credits'
+    }
+  },
+  finish_credits: {}
 }
 
 export const story = new Story<keyof typeof views>(

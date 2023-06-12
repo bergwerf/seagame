@@ -209,6 +209,10 @@ export const views = {
   ]),
   cleanup_completed: new layer.Composite([
     layers.cleanup_completed,
+    layers.frame_stars
+  ]),
+  cleanup_completed_next: new layer.Composite([
+    layers.cleanup_completed,
     layers.nav_next,
     layers.frame_stars
   ]),
@@ -218,5 +222,10 @@ export const views = {
     layers.finish_happy,
     layers.nav_next
   ]),
-  finish_cake: layers.finish_cake
+  finish_cake: layers.finish_cake,
+  finish_cake_next: new layer.Composite([
+    layers.finish_cake,
+    layers.nav_next
+  ]),
+  finish_credits: layers.finish_credits
 }

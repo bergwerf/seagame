@@ -360,10 +360,11 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
     exports.Image = Image;
     var Video = /** @class */ (function () {
         function Video(src, _a) {
-            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.resize, resize = _d === void 0 ? m.vec2(0, 0) : _d, _e = _b.muted, muted = _e === void 0 ? true : _e, _f = _b.loop, loop = _f === void 0 ? false : _f;
+            var _b = _a === void 0 ? {} : _a, _c = _b.on_finish, on_finish = _c === void 0 ? 'finish' : _c, _d = _b.resize, resize = _d === void 0 ? m.vec2(0, 0) : _d, _e = _b.defer, defer = _e === void 0 ? false : _e, _f = _b.muted, muted = _f === void 0 ? true : _f, _g = _b.loop, loop = _g === void 0 ? false : _g;
             this.src = src;
             this.finish_event = on_finish;
             this.size = resize;
+            this.defer = defer;
             this.video = document.createElement("video");
             this.video.muted = muted;
             this.video.loop = loop;
@@ -373,24 +374,30 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
             return __awaiter(this, void 0, void 0, function () {
                 var _this = this;
                 return __generator(this, function (_a) {
-                    return [2 /*return*/, new Promise(function (resolve, _) {
-                            _this.video.addEventListener('canplaythrough', function () {
-                                var w = _this.video.videoWidth;
-                                var h = _this.video.videoHeight;
-                                if (_this.size.x == 0) {
-                                    _this.size = m.vec2(w, h);
-                                }
-                                _this.cache = canvas.create(w, h);
-                                _this.cache_ctx = _this.cache.getContext('2d');
-                            }, { once: true });
-                            _this.video.src = _this.src;
-                            _this.video.load();
-                            resolve();
-                        })];
+                    if (!this.defer) {
+                        return [2 /*return*/, new Promise(function (resolve, _) {
+                                _this.video.addEventListener('canplaythrough', function () {
+                                    var w = _this.video.videoWidth;
+                                    var h = _this.video.videoHeight;
+                                    if (_this.size.x == 0) {
+                                        _this.size = m.vec2(w, h);
+                                    }
+                                    _this.cache = canvas.create(w, h);
+                                    _this.cache_ctx = _this.cache.getContext('2d');
+                                    resolve();
+                                }, { once: true });
+                                _this.video.src = _this.src;
+                                _this.video.load();
+                            })];
+                    }
+                    return [2 /*return*/];
                 });
             });
         };
         Video.prototype.start = function () {
+            if (this.defer) {
+                this.video.src = this.src;
+            }
             this.video.pause();
             this.video.currentTime = 0;
             this.video.load();
@@ -403,11 +410,17 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
             this.video.play();
         };
         Video.prototype.draw = function (ctx) {
+            // Deferred videos don't use a frame cache and don't use resize.
+            // This is an ad-hoc rule, because we only use `defer` for the credits.
+            if (this.defer) {
+                ctx.drawImage(this.video, 0, 0);
+            }
             // The frame cache mitigates blank frames between rewinds.
-            if (this.cache) {
+            else if (this.cache) {
                 this.cache_ctx.drawImage(this.video, 0, 0);
                 ctx.drawImage(this.cache, 0, 0, this.size.x, this.size.y);
             }
+            // Fallback.
             else {
                 ctx.drawImage(this.video, 0, 0, this.size.x, this.size.y);
             }
@@ -932,7 +945,8 @@ define("game/layers", ["require", "exports", "util/math", "layer/all", "story"],
         cleanup_completed: new layer.Video('assets/cleanup/completed.mp4'),
         // Game finish
         finish_happy: new layer.Video('assets/finish/happy.mp4', { loop: true }),
-        finish_cake: new layer.Video('assets/finish/cake.mp4')
+        finish_cake: new layer.Video('assets/finish/cake.mp4'),
+        finish_credits: new layer.Video('assets/finish/credits.mp4', { defer: true })
     };
 });
 // Game Views
@@ -1121,6 +1135,10 @@ define("game/views", ["require", "exports", "layer/all", "story", "game/layers"]
         ]),
         cleanup_completed: new layer.Composite([
             layers_1.layers.cleanup_completed,
+            layers_1.layers.frame_stars
+        ]),
+        cleanup_completed_next: new layer.Composite([
+            layers_1.layers.cleanup_completed,
             layers_1.layers.nav_next,
             layers_1.layers.frame_stars
         ]),
@@ -1129,7 +1147,12 @@ define("game/views", ["require", "exports", "layer/all", "story", "game/layers"]
             layers_1.layers.finish_happy,
             layers_1.layers.nav_next
         ]),
-        finish_cake: layers_1.layers.finish_cake
+        finish_cake: layers_1.layers.finish_cake,
+        finish_cake_next: new layer.Composite([
+            layers_1.layers.finish_cake,
+            layers_1.layers.nav_next
+        ]),
+        finish_credits: layers_1.layers.finish_credits
     };
 });
 // Game Logic
@@ -1225,8 +1248,8 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             continue: function () {
                 sounds.sea.loop = true;
                 sounds.sea.play();
-                layers_2.layers.intro_crab.start();
-                return 'intro_crab';
+                layers_2.layers.cleanup_completed.start();
+                return 'finish_cake_next';
             }
         },
         intro_crab: {
@@ -1560,6 +1583,9 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
             }
         },
         cleanup_completed: {
+            finish: function () { return 'cleanup_completed_next'; }
+        },
+        cleanup_completed_next: {
             next: function () {
                 update_stars();
                 sounds.guitar.pause();
@@ -1578,7 +1604,16 @@ define("game/logic", ["require", "exports", "story", "game/layers", "game/views"
                 return 'finish_cake';
             }
         },
-        finish_cake: {}
+        finish_cake: {
+            finish: function () { return 'finish_cake_next'; }
+        },
+        finish_cake_next: {
+            next: function () {
+                layers_2.layers.finish_credits.start();
+                return 'finish_credits';
+            }
+        },
+        finish_credits: {}
     };
     exports.story = new story_7.Story(views_1.views, events, 'loading');
     function start() {

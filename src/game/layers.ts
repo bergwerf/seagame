@@ -154,5 +154,6 @@ export const layers = {
 
   // Game finish
   finish_happy: new layer.Video('assets/finish/happy.mp4', { loop: true }),
-  finish_cake: new layer.Video('assets/finish/cake.mp4')
+  finish_cake: new layer.Video('assets/finish/cake.mp4'),
+  finish_credits: new layer.Video('assets/finish/credits.mp4', { defer: true })
 }
