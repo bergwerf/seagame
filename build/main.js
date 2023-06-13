@@ -383,7 +383,7 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
                 return __generator(this, function (_a) {
                     if (!this.defer) {
                         return [2 /*return*/, new Promise(function (resolve, _) {
-                                _this.video.addEventListener('canplaythrough', function () {
+                                _this.video.addEventListener('canplay', function () {
                                     var w = _this.video.videoWidth;
                                     var h = _this.video.videoHeight;
                                     if (_this.size.x == 0) {
@@ -391,10 +391,12 @@ define("layer/media", ["require", "exports", "util/math", "util/canvas", "../uti
                                     }
                                     _this.cache = canvas.create(w, h);
                                     _this.cache_ctx = _this.cache.getContext('2d');
-                                    resolve();
                                 }, { once: true });
                                 _this.video.src = _this.src;
                                 _this.video.load();
+                                // Don't wait until the video is ready to play, because sometimes this
+                                // takes ages.
+                                resolve();
                             })];
                     }
                     return [2 /*return*/];

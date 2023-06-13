@@ -54,7 +54,7 @@ export class Video implements Layer {
   async load() {
     if (!this.defer) {
       return new Promise<void>((resolve, _) => {
-        this.video.addEventListener('canplaythrough', () => {
+        this.video.addEventListener('canplay', () => {
           const w = this.video.videoWidth
           const h = this.video.videoHeight
           if (this.size.x == 0) {
@@ -62,10 +62,12 @@ export class Video implements Layer {
           }
           this.cache = canvas.create(w, h)
           this.cache_ctx = this.cache.getContext('2d')!
-          resolve()
         }, { once: true })
         this.video.src = this.src
         this.video.load()
+        // Don't wait until the video is ready to play, because sometimes this
+        // takes ages.
+        resolve()
       })
     }
   }
